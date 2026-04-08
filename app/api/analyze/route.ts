@@ -61,10 +61,12 @@ export async function POST(req: NextRequest) {
         const baseAnalysis = await analyzeVendors(enrichedProblem, vendorData);
         controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done — diving into top build challenges..." }));
 
-        // ── 5. Top 3 hardest features: all run in parallel ───────────────────
+        // ── 5+6. Challenges + LLM analysis all in parallel ───────────────────
         const hardestItems = [...(baseAnalysis.build_feasibility_breakdown ?? [])]
           .sort((a, b) => a.feasibility_score - b.feasibility_score)
           .slice(0, 3);
+
+        const featureNames = baseAnalysis.build_feasibility_breakdown.map((f) => f.feature);
 
         // Announce all challenges upfront
         hardestItems.forEach((item, i) => {
@@ -75,48 +77,44 @@ export async function POST(req: NextRequest) {
             message: `Analyzing challenge: "${item.feature}"...`,
           }));
         });
+        controller.enqueue(encode({ type: "llm_analysis", message: "Analyzing LLM vs deterministic trade-offs..." }));
 
-        const challengeResults = await Promise.allSettled(
-          hardestItems.map(async (item, i) => {
-            // 5a. Ask Claude which components are relevant → get URLs
-            const componentRefs = await identifyComponents(enrichedProblem, item);
+        const [challengeResults, llmVsDet] = await Promise.all([
+          Promise.allSettled(
+            hardestItems.map(async (item, i) => {
+              const componentRefs = await identifyComponents(enrichedProblem, item);
 
-            // 5b. Scrape component pages in parallel
-            let componentData: { name: string; url: string; category: string; why_relevant: string; scraped_content: string }[] = [];
-            if (componentRefs.length > 0) {
-              const { scrape } = await import("@/lib/firecrawl");
-              const scrapeResults = await Promise.allSettled(
-                componentRefs.map(async (c) => {
-                  const content = await scrape(c.url);
-                  return { name: c.component_name, url: c.url, category: c.category, why_relevant: c.why_relevant, scraped_content: content };
-                })
-              );
-              componentData = scrapeResults
-                .filter((r): r is PromiseFulfilledResult<typeof componentData[0]> => r.status === "fulfilled")
-                .map((r) => r.value);
-            }
+              let componentData: { name: string; url: string; category: string; why_relevant: string; scraped_content: string }[] = [];
+              if (componentRefs.length > 0) {
+                const { scrape } = await import("@/lib/firecrawl");
+                const scrapeResults = await Promise.allSettled(
+                  componentRefs.map(async (c) => {
+                    const content = await scrape(c.url);
+                    return { name: c.component_name, url: c.url, category: c.category, why_relevant: c.why_relevant, scraped_content: content };
+                  })
+                );
+                componentData = scrapeResults
+                  .filter((r): r is PromiseFulfilledResult<typeof componentData[0]> => r.status === "fulfilled")
+                  .map((r) => r.value);
+              }
 
-            // 5c. Deep dive with scraped component data
-            const challenge = await analyzeBuildChallenge(enrichedProblem, item, componentData);
+              const challenge = await analyzeBuildChallenge(enrichedProblem, item, componentData);
 
-            controller.enqueue(encode({
-              type: "challenge_done",
-              challenge_index: i,
-              message: `Done: "${item.feature}"`,
-            }));
+              controller.enqueue(encode({
+                type: "challenge_done",
+                challenge_index: i,
+                message: `Done: "${item.feature}"`,
+              }));
 
-            return challenge;
-          })
-        );
+              return challenge;
+            })
+          ),
+          analyzeLLMvsDeterministic(enrichedProblem, featureNames),
+        ]);
 
         const topBuildChallenges = challengeResults
           .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof analyzeBuildChallenge>>> => r.status === "fulfilled")
           .map((r) => r.value);
-
-        // ── 6. LLM vs deterministic breakdown ────────────────────────────────
-        controller.enqueue(encode({ type: "llm_analysis", message: "Analyzing LLM vs deterministic trade-offs..." }));
-        const featureNames = baseAnalysis.build_feasibility_breakdown.map((f) => f.feature);
-        const llmVsDet = await analyzeLLMvsDeterministic(enrichedProblem, featureNames);
 
         // ── 7. Inject researched flags into vendor list, stream final result ──
         const researchedUrls = new Set(vendorData.filter(v => v.researched).map(v => v.url));
