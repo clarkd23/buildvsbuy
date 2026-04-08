@@ -1,4 +1,4 @@
-import { NextRequest, after } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import {
   generateSearchQuery,
@@ -164,47 +164,41 @@ export async function POST(req: NextRequest) {
         console.log(t0(), "streaming final result");
         controller.enqueue(encode({ type: "result", data: finalResult }));
 
-        // ── 8. Generate next steps after result is streamed ───────────────────
-        console.log(t0(), "generating next steps...");
-        const nextSteps = await generateNextSteps(
-          enrichedProblem,
-          baseAnalysis.context_summary,
-          baseAnalysis.options.map(o => o.title)
-        );
-        console.log(t0(), "next steps done, count:", nextSteps.length);
+        // ── 8. Generate next steps + persist in parallel, both with timeouts ──
+        console.log(t0(), "generating next steps + persisting...");
+        const [nextSteps] = await Promise.all([
+          Promise.race([
+            generateNextSteps(
+              enrichedProblem,
+              baseAnalysis.context_summary,
+              baseAnalysis.options.map(o => o.title)
+            ).then(r => { console.log(t0(), "next steps done:", r.length); return r; }),
+            new Promise<[]>(resolve => setTimeout(() => {
+              console.log(t0(), "next steps timed out");
+              resolve([]);
+            }, 20_000)),
+          ]),
+          // Persist to DB with timeout so it never blocks stream close
+          Promise.race([
+            (async () => {
+              try {
+                const user = await getOrCreateUser(userId, "");
+                await incrementUsage(userId);
+                await prisma.analysis.create({
+                  data: { userId: user.id, problemStatement, resultJson: finalResult as object },
+                });
+                console.log(t0(), "persisted analysis");
+              } catch (err) {
+                console.error("[analyze] persist failed:", err);
+              }
+            })(),
+            new Promise<void>(resolve => setTimeout(resolve, 15_000)),
+          ]),
+        ]);
+
         if (nextSteps.length > 0) {
           controller.enqueue(encode({ type: "next_steps", next_steps: nextSteps }));
         }
-
-        // Persist analysis + fire lead webhook after stream closes
-        after(async () => {
-          try {
-            const user = await getOrCreateUser(userId, "");
-            await incrementUsage(userId);
-            const analysis = await prisma.analysis.create({
-              data: {
-                userId: user.id,
-                problemStatement,
-                resultJson: finalResult as object,
-              },
-            });
-
-            if (process.env.LEAD_WEBHOOK_URL) {
-              await fetch(process.env.LEAD_WEBHOOK_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  email: user.email,
-                  problemStatement,
-                  analysisId: analysis.id,
-                  createdAt: analysis.createdAt,
-                }),
-              });
-            }
-          } catch (err) {
-            console.error("[analyze] post-response hook failed:", err);
-          }
-        });
 
       } catch (err) {
         const message = err instanceof Error ? err.message : "An unexpected error occurred";
@@ -220,7 +214,8 @@ export async function POST(req: NextRequest) {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }
