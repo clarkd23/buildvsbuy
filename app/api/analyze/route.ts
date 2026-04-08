@@ -14,7 +14,7 @@ import { DiscoveryAnswer, StreamEvent } from "@/types/analysis";
 import { getOrCreateUser, incrementUsage } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 const t0 = () => `[analyze +${((Date.now() - (globalThis as unknown as {_t0?: number})._t0!) / 1000).toFixed(1)}s]`;
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         // ── 5+6. Challenges + LLM analysis all in parallel ───────────────────
         const hardestItems = [...(baseAnalysis.build_feasibility_breakdown ?? [])]
           .sort((a, b) => a.feasibility_score - b.feasibility_score)
-          .slice(0, 3);
+          .slice(0, 2);
 
         const featureNames = baseAnalysis.build_feasibility_breakdown.map((f) => f.feature);
 

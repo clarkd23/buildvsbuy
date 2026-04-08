@@ -5,7 +5,7 @@ function getFirecrawl() {
 }
 
 const SEARCH_LIMIT = 10;  // vendors found in search
-const SCRAPE_LIMIT = 6;   // vendors deep-researched (scraped)
+const SCRAPE_LIMIT = 4;   // vendors deep-researched (scraped)
 
 export interface VendorSearchResult {
   name: string;
