@@ -3,8 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { generateDiscoveryQuestions } from "@/lib/claude";
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // AUTH DISABLED — re-enable when ready
+  // const { userId } = await auth();
+  // if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { problemStatement } = await req.json();
   if (!problemStatement?.trim()) {

@@ -23,8 +23,10 @@ function encode(event: StreamEvent): Uint8Array {
 }
 
 export async function POST(req: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return new Response("Unauthorized", { status: 401 });
+  // AUTH DISABLED — re-enable when ready
+  // const { userId } = await auth();
+  // if (!userId) return new Response("Unauthorized", { status: 401 });
+  const { userId } = { userId: "anonymous" };
 
   const { problemStatement, answers } = await req.json() as {
     problemStatement: string;

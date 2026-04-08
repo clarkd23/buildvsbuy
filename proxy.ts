@@ -9,10 +9,9 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks(.*)",
 ]);
 
-export const proxy = clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
+// AUTH DISABLED — re-enable route protection when ready
+export const proxy = clerkMiddleware(async (_auth, _req) => {
+  // if (!isPublicRoute(req)) { await auth.protect(); }
 });
 
 export const config = {

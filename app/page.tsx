@@ -42,11 +42,12 @@ export default function Home() {
   async function handleProblemSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!problem.trim()) return;
-    if (!isSignedIn) {
-      localStorage.setItem("bvb_problem", problem);
-      router.push("/sign-in");
-      return;
-    }
+    // AUTH DISABLED — re-enable sign-in redirect when ready
+    // if (!isSignedIn) {
+    //   localStorage.setItem("bvb_problem", problem);
+    //   router.push("/sign-in");
+    //   return;
+    // }
 
     setPhase("generating_questions");
     setQuestions([]);
