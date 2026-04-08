@@ -3,11 +3,12 @@
 import { useState, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { AnalysisResult, DiscoveryAnswer, DiscoveryQuestion, StreamEvent } from "@/types/analysis";
+import { AnalysisResult, DiscoveryAnswer, DiscoveryQuestion, Persona, StreamEvent } from "@/types/analysis";
 import ResultsDashboard from "@/components/ResultsDashboard";
 import DiscoveryPhase from "@/components/DiscoveryPhase";
 import AnalysisProgressBar from "@/components/AnalysisProgressBar";
 import ExportButton from "@/components/ExportButton";
+import PersonaSelector from "@/components/PersonaSelector";
 
 type Phase = "idle" | "generating_questions" | "discovery" | "analyzing" | "done" | "error";
 
@@ -33,6 +34,7 @@ export default function Home() {
   const [activeChallenges, setActiveChallenges] = useState<Record<number, string>>({});
   const [doneChallenges, setDoneChallenges] = useState<number[]>([]);
 
+  const [selectedPersona, setSelectedPersona] = useState<Persona>("exec");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -146,7 +148,12 @@ export default function Home() {
           setDoneChallenges((prev) => [...prev, event.challenge_index!]);
         break;
       case "result":
-        if (event.data) { setResult(event.data); setPhase("done"); }
+        if (event.data) { setResult({ ...event.data, persona_views: [] }); setPhase("done"); }
+        break;
+      case "persona_view":
+        if (event.persona_view) {
+          setResult(prev => prev ? { ...prev, persona_views: [...(prev.persona_views ?? []), event.persona_view!] } : prev);
+        }
         break;
       case "next_steps":
         if (event.next_steps) {
@@ -170,6 +177,7 @@ export default function Home() {
     setDoneChallenges([]);
     setResult(null);
     setErrorMsg("");
+    setSelectedPersona("exec");
     setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
@@ -198,6 +206,7 @@ export default function Home() {
                 rows={4}
                 disabled={phase === "generating_questions"}
               />
+              <PersonaSelector selected={selectedPersona} onChange={setSelectedPersona} />
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
                 <p className="text-xs text-gray-400">
                   {phase === "generating_questions"
@@ -327,7 +336,7 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <ResultsDashboard result={result} />
+            <ResultsDashboard result={result} selectedPersona={selectedPersona} onPersonaChange={setSelectedPersona} />
           </div>
         )}
 

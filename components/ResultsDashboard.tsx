@@ -1,9 +1,17 @@
-import { AnalysisResult } from "@/types/analysis";
+import { AnalysisResult, Persona } from "@/types/analysis";
 import VendorCard from "./VendorCard";
 import StrategyOptions from "./StrategyOptions";
 import ChallengeDeepDive from "./ChallengeDeepDive";
 import LLMvsDetSection from "./LLMvsDetSection";
 import ExpandableSection from "./ExpandableSection";
+import NextStepsSection from "./NextStepsSection";
+import PersonaViewCard from "./PersonaView";
+
+const PERSONA_TABS: { id: Persona; label: string }[] = [
+  { id: "exec",        label: "Executive" },
+  { id: "product",     label: "Product" },
+  { id: "engineering", label: "Engineering" },
+];
 
 function challengeSummary(challenges: AnalysisResult["top_build_challenges"]) {
   if (!challenges?.length) return "";
@@ -30,10 +38,51 @@ function vendorSummary(vendors: AnalysisResult["top_vendors"]) {
   return `${vendors.length} vendors · ${researched} deep researched`;
 }
 
-export default function ResultsDashboard({ result }: { result: AnalysisResult }) {
+export default function ResultsDashboard({
+  result,
+  selectedPersona,
+  onPersonaChange,
+}: {
+  result: AnalysisResult;
+  selectedPersona: Persona;
+  onPersonaChange: (p: Persona) => void;
+}) {
+  const activeView = result.persona_views?.find(v => v.persona === selectedPersona);
+
   return (
     <div className="space-y-3 animate-fadeIn">
-      {/* Context — always visible, not expandable */}
+
+      {/* Persona tab bar + active view */}
+      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="flex border-b border-gray-100">
+          {PERSONA_TABS.map(tab => {
+            const active = selectedPersona === tab.id;
+            const loaded = result.persona_views?.some(v => v.persona === tab.id);
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onPersonaChange(tab.id)}
+                className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
+                  active
+                    ? "text-gray-900 bg-gray-50"
+                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {tab.label}
+                {!loaded && (
+                  <span className="absolute top-2 right-3 w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
+                )}
+                {active && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <PersonaViewCard persona={selectedPersona} view={activeView} />
+      </div>
+
+      {/* Context */}
       <div className="bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Analysis Context</p>
         <p className="text-gray-700 leading-relaxed text-sm">{result.context_summary}</p>
@@ -52,7 +101,7 @@ export default function ResultsDashboard({ result }: { result: AnalysisResult })
         </ExpandableSection>
       )}
 
-{/* Build challenge deep dives */}
+      {/* Build challenge deep dives */}
       {result.top_build_challenges?.length > 0 && (
         <ExpandableSection
           title="Top Build Challenges"
@@ -78,6 +127,19 @@ export default function ResultsDashboard({ result }: { result: AnalysisResult })
         </ExpandableSection>
       )}
 
+      {/* Next steps */}
+      {result.next_steps?.length > 0 && (
+        <ExpandableSection
+          title="Recommended Next Steps"
+          summary={`${result.next_steps.length} actions · ${result.next_steps.map(s => s.priority).join(" · ")}`}
+          defaultOpen={true}
+          badge="Action plan"
+          badgeColor="bg-green-50 text-green-600"
+        >
+          <NextStepsSection steps={result.next_steps} />
+        </ExpandableSection>
+      )}
+
       {/* Vendors */}
       {result.top_vendors?.length > 0 && (
         <ExpandableSection
@@ -87,7 +149,7 @@ export default function ResultsDashboard({ result }: { result: AnalysisResult })
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {result.top_vendors.map((vendor, i) => (
-              <VendorCard key={i} vendor={vendor} />
+              <VendorCard key={i} vendor={vendor} context={result.context_summary} />
             ))}
           </div>
         </ExpandableSection>

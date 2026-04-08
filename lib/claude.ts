@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { AnalysisResult, BuildChallenge, DiscoveryAnswer, DiscoveryQuestion, FeasibilityItem, LLMvsDetItem } from "@/types/analysis";
+import { AnalysisResult, BuildChallenge, DiscoveryAnswer, DiscoveryQuestion, FeasibilityItem, LLMvsDetItem, Persona, PersonaView } from "@/types/analysis";
 
 const getClient = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -395,4 +395,74 @@ Respond with ONLY a valid JSON array:
   const block = response.content[0];
   if (block.type !== "text") return [];
   try { return parseJSON(block.text); } catch { return []; }
+}
+
+// ─── Step 5: Persona synthesis ────────────────────────────────────────────────
+
+const PERSONA_CONFIG: Record<Persona, { label: string; focus: string }> = {
+  exec: {
+    label: "C-suite executive",
+    focus: "Focus on: total cost of ownership, time-to-value, strategic risk, vendor dependency, and which option gives the best business outcome. Use plain business language — no technical jargon. Frame everything in business impact, ROI, and risk.",
+  },
+  product: {
+    label: "Product Manager",
+    focus: "Focus on: feature coverage vs requirements, which vendor(s) best fit the use case, integration complexity, vendor lock-in risk, and roadmap implications of each path. Balance business priorities with practical product considerations.",
+  },
+  engineering: {
+    label: "Engineering Lead",
+    focus: "Focus on: actual build complexity, specific technical challenges, recommended stack and components, realistic integration effort, ongoing maintenance burden, and key architectural decisions. Be specific and technical — name real tools and frameworks.",
+  },
+};
+
+export async function synthesizeForPersona(
+  problemStatement: string,
+  result: Omit<AnalysisResult, "persona_views">,
+  persona: Persona
+): Promise<PersonaView> {
+  const { label, focus } = PERSONA_CONFIG[persona];
+
+  const condensed = {
+    context: result.context_summary,
+    options: result.options?.map(o => ({
+      title: o.title, type: o.type, tagline: o.tagline,
+      pros: o.pros, cons: o.cons, cost: o.estimated_cost,
+      time: o.estimated_time, risk: o.risk_level, best_for: o.best_for,
+    })),
+    vendors: result.top_vendors?.map(v => ({
+      name: v.name, fit_score: v.fit_score, pros: v.pros.slice(0, 2), cons: v.cons.slice(0, 2),
+    })),
+    feasibility: result.build_feasibility_breakdown,
+    challenges: result.top_build_challenges?.map(c => ({
+      feature: c.feature, why_hard: c.why_hard, ai_verdict: c.ai_verdict,
+      with_components_feasibility: c.with_components_feasibility,
+    })),
+    llm_breakdown: result.llm_vs_deterministic?.map(l => ({
+      component: l.component, approach: l.approach, rationale: l.rationale,
+    })),
+    next_steps: result.next_steps,
+  };
+
+  const response = await getClient().messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1024,
+    system: `You are translating a build vs buy analysis for a ${label}. ${focus}
+
+Respond with ONLY valid JSON:
+{
+  "persona": "${persona}",
+  "headline": "One punchy sentence capturing the key verdict for this audience — specific to the actual problem and options",
+  "summary": "2-3 sentences framed entirely for this audience's priorities. No jargon if exec, technical depth if engineering.",
+  "key_points": ["4 specific bullet points most relevant to this persona — tied to the actual analysis, not generic"],
+  "recommendation": "Clear recommended path with 1-2 sentences of reasoning in this audience's language",
+  "watch_out": ["2-3 specific risks or concerns most relevant to this persona"]
+}`,
+    messages: [{
+      role: "user",
+      content: `Problem: "${problemStatement}"\n\nAnalysis:\n${JSON.stringify(condensed, null, 2)}\n\nSynthesize this for a ${label}.`,
+    }],
+  });
+
+  const block = response.content[0];
+  if (block.type !== "text") throw new Error("Unexpected response from Claude");
+  return parseJSON<PersonaView>(block.text);
 }

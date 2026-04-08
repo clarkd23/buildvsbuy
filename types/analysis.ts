@@ -109,6 +109,19 @@ export interface LLMvsDetItem {
   example_eval: string;
 }
 
+// ─── Persona views ────────────────────────────────────────────────────────────
+
+export type Persona = "exec" | "product" | "engineering";
+
+export interface PersonaView {
+  persona: Persona;
+  headline: string;
+  summary: string;
+  key_points: string[];
+  recommendation: string;
+  watch_out: string[];
+}
+
 // ─── Next steps ───────────────────────────────────────────────────────────────
 
 export type NextStepPriority = "Do this week" | "Do this month" | "Consider later";
@@ -129,6 +142,7 @@ export interface AnalysisResult {
   llm_vs_deterministic: LLMvsDetItem[];
   context_summary: string;
   next_steps: NextStep[];
+  persona_views: PersonaView[];
 }
 
 // ─── Streaming ────────────────────────────────────────────────────────────────
@@ -143,6 +157,7 @@ export type StreamEventType =
   | "llm_analysis"
   | "result"
   | "next_steps"
+  | "persona_view"
   | "error";
 
 export interface StreamEvent {
@@ -153,5 +168,6 @@ export interface StreamEvent {
   challenge_index?: number;
   data?: AnalysisResult;
   next_steps?: NextStep[];
+  persona_view?: PersonaView;
   error?: string;
 }

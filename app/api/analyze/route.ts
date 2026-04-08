@@ -8,7 +8,9 @@ import {
   analyzeLLMvsDeterministic,
   generateNextSteps,
   buildEnrichedContext,
+  synthesizeForPersona,
 } from "@/lib/claude";
+import { Persona } from "@/types/analysis";
 import { searchVendors, scrapeVendors } from "@/lib/firecrawl";
 import { DiscoveryAnswer, StreamEvent } from "@/types/analysis";
 import { getOrCreateUser, incrementUsage } from "@/lib/user";
@@ -169,8 +171,25 @@ export async function POST(req: NextRequest) {
         console.log(t0(), "streaming final result");
         controller.enqueue(encode({ type: "result", data: finalResult }));
 
-        // ── 8. Generate next steps + persist in parallel, both with timeouts ──
-        console.log(t0(), "generating next steps + persisting...");
+        // ── 8. Next steps + DB persist + persona synthesis — all in parallel ──
+        console.log(t0(), "generating next steps, persona views, persisting...");
+
+        // Start all 3 persona synthesis calls — stream each as it completes
+        const personas: Persona[] = ["exec", "product", "engineering"];
+        const synthesisPromises = personas.map(persona =>
+          Promise.race([
+            synthesizeForPersona(enrichedProblem, finalResult, persona).then(view => {
+              console.log(t0(), `persona[${persona}] done`);
+              controller.enqueue(encode({ type: "persona_view", persona_view: view }));
+              return view;
+            }),
+            new Promise<null>(resolve => setTimeout(() => {
+              console.log(t0(), `persona[${persona}] timed out`);
+              resolve(null);
+            }, 30_000)),
+          ])
+        );
+
         const [nextSteps] = await Promise.all([
           Promise.race([
             generateNextSteps(
@@ -183,7 +202,6 @@ export async function POST(req: NextRequest) {
               resolve([]);
             }, 20_000)),
           ]),
-          // Persist to DB with timeout so it never blocks stream close
           Promise.race([
             (async () => {
               try {
@@ -199,6 +217,7 @@ export async function POST(req: NextRequest) {
             })(),
             new Promise<void>(resolve => setTimeout(resolve, 15_000)),
           ]),
+          Promise.allSettled(synthesisPromises),
         ]);
 
         if (nextSteps.length > 0) {
