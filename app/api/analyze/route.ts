@@ -42,14 +42,17 @@ export async function POST(req: NextRequest) {
       (globalThis as unknown as {_t0?: number})._t0 = Date.now();
       console.log("[analyze] start");
       try {
+        const timeout = <T>(ms: number, label: string, promise: Promise<T>): Promise<T> =>
+          Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms))]);
+
         // ── 1. Generate search query ──────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: "Generating vendor search query..." }));
-        const searchQuery = await generateSearchQuery(problemStatement);
+        const searchQuery = await timeout(30_000, "generateSearchQuery", generateSearchQuery(problemStatement));
         console.log(t0(), "searchQuery:", searchQuery);
 
         // ── 2. Search for vendors ─────────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: `Searching: "${searchQuery}"...` }));
-        const vendors = await searchVendors(searchQuery);
+        const vendors = await timeout(30_000, "searchVendors", searchVendors(searchQuery));
         console.log(t0(), "vendors found:", vendors.length);
         controller.enqueue(encode({
           type: "vendors_found",
@@ -59,14 +62,14 @@ export async function POST(req: NextRequest) {
 
         // ── 3. Scrape vendor sites (top 6 deep; rest found-only) ─────────────
         controller.enqueue(encode({ type: "status", message: "Deep researching vendor websites..." }));
-        const vendorData = await scrapeVendors(vendors);
+        const vendorData = await timeout(60_000, "scrapeVendors", scrapeVendors(vendors));
         const researchedCount = vendorData.filter(v => v.researched).length;
         console.log(t0(), "scraping complete:", researchedCount, "researched");
         controller.enqueue(encode({ type: "scraping_complete", message: `${vendors.length} vendors found · ${researchedCount} deep researched` }));
 
         // ── 4. Main analysis ──────────────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: "Analyzing build vs buy trade-offs..." }));
-        const baseAnalysis = await analyzeVendors(enrichedProblem, vendorData);
+        const baseAnalysis = await timeout(90_000, "analyzeVendors", analyzeVendors(enrichedProblem, vendorData));
         console.log(t0(), "baseAnalysis done, features:", baseAnalysis.build_feasibility_breakdown?.length);
         controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done — diving into top build challenges..." }));
 
