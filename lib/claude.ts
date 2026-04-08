@@ -126,7 +126,7 @@ export async function generateSearchQuery(problemStatement: string): Promise<str
     max_tokens: 100,
     messages: [{
       role: "user",
-      content: `Generate a concise Google search query (max 8 words) to find the top SaaS vendors that solve this problem: "${problemStatement}". Return only the search query, nothing else.`,
+      content: `Generate a concise search query (max 8 words) to find the top SaaS vendors and tools that solve this problem: "${problemStatement}". Do not include any year or date in the query. Return only the search query, nothing else.`,
     }],
   });
   const block = response.content[0];
