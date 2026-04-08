@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String     @id @default(cuid())
+  clerkId          String     @unique
+  email            String     @unique
+  analysesUsed     Int        @default(0)
+  dataShareConsent Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  analyses         Analysis[]
+
+  @@index([clerkId])
+}
+
+model Analysis {
+  id               String   @id @default(cuid())
+  userId           String
+  problemStatement String
+  resultJson       Json
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
