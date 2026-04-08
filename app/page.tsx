@@ -7,6 +7,7 @@ import { AnalysisResult, DiscoveryAnswer, DiscoveryQuestion, StreamEvent } from 
 import ResultsDashboard from "@/components/ResultsDashboard";
 import DiscoveryPhase from "@/components/DiscoveryPhase";
 import AnalysisProgressBar from "@/components/AnalysisProgressBar";
+import ExportButton from "@/components/ExportButton";
 
 type Phase = "idle" | "generating_questions" | "discovery" | "analyzing" | "done" | "error";
 
@@ -315,12 +316,15 @@ export default function Home() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={handleReset}
-                className="text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
-              >
-                New analysis
-              </button>
+              <div className="flex items-center gap-2">
+                <ExportButton result={result} problem={problem} />
+                <button
+                  onClick={handleReset}
+                  className="text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+                >
+                  New analysis
+                </button>
+              </div>
             </div>
             <ResultsDashboard result={result} />
           </div>
