@@ -13,7 +13,13 @@ type Phase = "idle" | "generating_questions" | "discovery" | "analyzing" | "done
 export default function Home() {
   const { isSignedIn } = useUser();
   const router = useRouter();
-  const [problem, setProblem] = useState("");
+  const [problem, setProblem] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bvb_problem");
+      if (saved) { localStorage.removeItem("bvb_problem"); return saved; }
+    }
+    return "";
+  });
   const [phase, setPhase] = useState<Phase>("idle");
 
   // Discovery
@@ -35,7 +41,11 @@ export default function Home() {
   async function handleProblemSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!problem.trim()) return;
-    if (!isSignedIn) { router.push("/sign-in"); return; }
+    if (!isSignedIn) {
+      localStorage.setItem("bvb_problem", problem);
+      router.push("/sign-in");
+      return;
+    }
 
     setPhase("generating_questions");
     setQuestions([]);
