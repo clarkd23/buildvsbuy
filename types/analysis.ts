@@ -109,6 +109,16 @@ export interface LLMvsDetItem {
   example_eval: string;
 }
 
+// ─── Next steps ───────────────────────────────────────────────────────────────
+
+export type NextStepPriority = "Do this week" | "Do this month" | "Consider later";
+
+export interface NextStep {
+  action: string;
+  rationale: string;
+  priority: NextStepPriority;
+}
+
 // ─── Full analysis result ─────────────────────────────────────────────────────
 
 export interface AnalysisResult {
@@ -118,6 +128,7 @@ export interface AnalysisResult {
   top_build_challenges: BuildChallenge[];
   llm_vs_deterministic: LLMvsDetItem[];
   context_summary: string;
+  next_steps: NextStep[];
 }
 
 // ─── Streaming ────────────────────────────────────────────────────────────────

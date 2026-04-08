@@ -1,6 +1,8 @@
 import { Vendor } from "@/types/analysis";
 
-export default function VendorCard({ vendor }: { vendor: Vendor }) {
+export default function VendorCard({ vendor, context }: { vendor: Vendor; context?: string }) {
+  const introHref = `mailto:clarkd23@gmail.com?subject=${encodeURIComponent(`Intro request: ${vendor.name}`)}&body=${encodeURIComponent(`Hi,\n\nI found ${vendor.name} while researching a build vs buy decision on buildvsbuy.ai.\n\n${context ? `Context: ${context}\n\n` : ""}I'd love an introduction. Could you help connect me?\n\nThanks`)}`;
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-3">
@@ -68,7 +70,7 @@ export default function VendorCard({ vendor }: { vendor: Vendor }) {
       </div>
 
       {vendor.notable_features.length > 0 && (
-        <div>
+        <div className="mb-3">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Key Features</p>
           <div className="flex flex-wrap gap-1">
             {vendor.notable_features.map((f, i) => (
@@ -78,6 +80,15 @@ export default function VendorCard({ vendor }: { vendor: Vendor }) {
             ))}
           </div>
         </div>
+      )}
+
+      {vendor.fit_score >= 7 && (
+        <a
+          href={introHref}
+          className="block w-full text-center text-xs font-medium bg-gray-900 text-white rounded-lg py-2 hover:bg-gray-700 transition-colors"
+        >
+          Request intro →
+        </a>
       )}
     </div>
   );

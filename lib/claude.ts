@@ -157,6 +157,7 @@ export async function analyzeVendors(
 - Be equally rigorous across all options — do not inflate or deflate any path
 - Use real pricing from vendor research where available
 - Decompose into 3–6 feature tasks for the feasibility matrix, scoring each on scratch AND component build
+- next_steps must be specific to this problem — not generic ("run a POC with [specific vendor]", "interview 3 current users about X workflow", "get a quote from [vendor] for [tier]"). One per priority level. Priority must be exactly "Do this week", "Do this month", or "Consider later".
 
 ## AI Build Feasibility Reference (score 1–5)
 | Feature Type | Scratch | With Components |
@@ -205,7 +206,24 @@ Respond with ONLY valid JSON:
       "notes": "One sentence"
     }
   ],
-  "context_summary": "One paragraph framing the decision space and what makes this problem interesting."
+  "context_summary": "One paragraph framing the decision space and what makes this problem interesting.",
+  "next_steps": [
+    {
+      "action": "Specific, concrete action to take — not generic advice",
+      "rationale": "One sentence: why this is the right first move given the analysis",
+      "priority": "Do this week"
+    },
+    {
+      "action": "...",
+      "rationale": "...",
+      "priority": "Do this month"
+    },
+    {
+      "action": "...",
+      "rationale": "...",
+      "priority": "Consider later"
+    }
+  ]
 }`;
 
   const response = await getClient().messages.create({
