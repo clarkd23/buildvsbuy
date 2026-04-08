@@ -31,8 +31,7 @@ export default function Home() {
   // Analysis progress
   const [statusMessages, setStatusMessages] = useState<string[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
-  const [activeChallenges, setActiveChallenges] = useState<Record<number, string>>({});
-  const [doneChallenges, setDoneChallenges] = useState<number[]>([]);
+  const [challengesExpected, setChallengesExpected] = useState(0);
 
   const [selectedPersona, setSelectedPersona] = useState<Persona>("exec");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -94,8 +93,7 @@ export default function Home() {
     setPhase("analyzing");
     setStatusMessages([]);
     setVendors([]);
-    setActiveChallenges({});
-    setDoneChallenges([]);
+    setChallengesExpected(0);
     setResult(null);
 
     try {
@@ -137,18 +135,16 @@ export default function Home() {
         if (event.vendors) setVendors(event.vendors);
         if (event.message) setStatusMessages((prev) => [...prev, event.message!]);
         break;
-      case "challenge_start":
-        if (event.challenge_index !== undefined && event.challenge_name) {
-          setActiveChallenges((prev) => ({ ...prev, [event.challenge_index!]: event.challenge_name! }));
-          if (event.message) setStatusMessages((prev) => [...prev, event.message!]);
-        }
-        break;
-      case "challenge_done":
-        if (event.challenge_index !== undefined)
-          setDoneChallenges((prev) => [...prev, event.challenge_index!]);
-        break;
       case "result":
         if (event.data) { setResult({ ...event.data, persona_views: [] }); setPhase("done"); }
+        break;
+      case "challenges_loading":
+        if (event.challenges_count) setChallengesExpected(event.challenges_count);
+        break;
+      case "challenge_result":
+        if (event.challenge_result) {
+          setResult(prev => prev ? { ...prev, top_build_challenges: [...(prev.top_build_challenges ?? []), event.challenge_result!] } : prev);
+        }
         break;
       case "persona_view":
         if (event.persona_view) {
@@ -173,8 +169,7 @@ export default function Home() {
     setAnswers({});
     setStatusMessages([]);
     setVendors([]);
-    setActiveChallenges({});
-    setDoneChallenges([]);
+    setChallengesExpected(0);
     setResult(null);
     setErrorMsg("");
     setSelectedPersona("exec");
@@ -274,25 +269,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-
-            {Object.keys(activeChallenges).length > 0 && (
-              <div className="mt-2">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Deep diving build challenges</p>
-                <div className="space-y-1.5">
-                  {Object.entries(activeChallenges).map(([idx, name]) => {
-                    const done = doneChallenges.includes(Number(idx));
-                    return (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        {done
-                          ? <span className="text-emerald-500">✓</span>
-                          : <div className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-pulse" />}
-                        <span className={done ? "text-muted-foreground" : "text-foreground"}>{name}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -337,7 +313,7 @@ export default function Home() {
                 </button>
               </div>
             </div>
-            <ResultsDashboard result={result} selectedPersona={selectedPersona} onPersonaChange={setSelectedPersona} />
+            <ResultsDashboard result={result} selectedPersona={selectedPersona} onPersonaChange={setSelectedPersona} challengesExpected={challengesExpected} />
           </div>
         )}
 

@@ -75,85 +75,24 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encode({ type: "status", message: "Analyzing build vs buy trade-offs..." }));
         const baseAnalysis = await timeout(90_000, "analyzeVendors", analyzeVendors(enrichedProblem, vendorData));
         console.log(t0(), "baseAnalysis done, features:", baseAnalysis.build_feasibility_breakdown?.length);
-        controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done — diving into top build challenges..." }));
+        controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done — analyzing LLM vs deterministic trade-offs..." }));
 
-        // ── 5+6. Challenges + LLM analysis all in parallel ───────────────────
-        const hardestItems = [...(baseAnalysis.build_feasibility_breakdown ?? [])]
-          .sort((a, b) => a.feasibility_score - b.feasibility_score)
-          .slice(0, 2);
-
+        // ── 5. LLM analysis (before result streams) ───────────────────────────
         const featureNames = baseAnalysis.build_feasibility_breakdown.map((f) => f.feature);
-
-        // Announce all challenges upfront
-        hardestItems.forEach((item, i) => {
-          controller.enqueue(encode({
-            type: "challenge_start",
-            challenge_name: item.feature,
-            challenge_index: i,
-            message: `Analyzing challenge: "${item.feature}"...`,
-          }));
-        });
         controller.enqueue(encode({ type: "llm_analysis", message: "Analyzing LLM vs deterministic trade-offs..." }));
-        console.log(t0(), "starting parallel: challenges", hardestItems.map(h => h.feature), "+ LLM analysis");
 
-        const [challengeResults, llmVsDet] = await Promise.all([
-          Promise.allSettled(
-            hardestItems.map(async (item, i) => {
-              console.log(t0(), `challenge[${i}] start: ${item.feature}`);
-              const componentRefs = await identifyComponents(enrichedProblem, item);
-              console.log(t0(), `challenge[${i}] components identified:`, componentRefs.map(c => c.component_name));
-
-              let componentData: { name: string; url: string; category: string; why_relevant: string; scraped_content: string }[] = [];
-              if (componentRefs.length > 0) {
-                const { scrape } = await import("@/lib/firecrawl");
-                const scrapeResults = await Promise.allSettled(
-                  componentRefs.map(async (c) => {
-                    console.log(t0(), `challenge[${i}] scraping: ${c.url}`);
-                    const content = await scrape(c.url);
-                    console.log(t0(), `challenge[${i}] scraped: ${c.url} (${content.length} chars)`);
-                    return { name: c.component_name, url: c.url, category: c.category, why_relevant: c.why_relevant, scraped_content: content };
-                  })
-                );
-                componentData = scrapeResults
-                  .filter((r): r is PromiseFulfilledResult<typeof componentData[0]> => r.status === "fulfilled")
-                  .map((r) => r.value);
-              }
-
-              console.log(t0(), `challenge[${i}] calling analyzeBuildChallenge...`);
-              const challenge = await Promise.race([
-                analyzeBuildChallenge(enrichedProblem, item, componentData),
-                new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`challenge[${i}] timed out`)), 50_000)),
-              ]);
-              console.log(t0(), `challenge[${i}] done: ${item.feature}`);
-
-              controller.enqueue(encode({
-                type: "challenge_done",
-                challenge_index: i,
-                message: `Done: "${item.feature}"`,
-              }));
-
-              return challenge;
-            })
-          ),
-          Promise.race([
-            analyzeLLMvsDeterministic(enrichedProblem, featureNames).then(r => {
-              console.log(t0(), "LLM analysis done");
-              return r;
-            }),
-            new Promise<[]>(resolve => setTimeout(() => {
-              console.log(t0(), "LLM analysis timed out — skipping");
-              resolve([]);
-            }, 45_000)),
-          ]),
+        const llmVsDet = await Promise.race([
+          analyzeLLMvsDeterministic(enrichedProblem, featureNames).then(r => {
+            console.log(t0(), "LLM analysis done");
+            return r;
+          }),
+          new Promise<[]>(resolve => setTimeout(() => {
+            console.log(t0(), "LLM analysis timed out — skipping");
+            resolve([]);
+          }, 45_000)),
         ]);
 
-        console.log(t0(), "all parallel work complete");
-
-        const topBuildChallenges = challengeResults
-          .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof analyzeBuildChallenge>>> => r.status === "fulfilled")
-          .map((r) => r.value);
-
-        // ── 7. Inject researched flags into vendor list, stream final result ──
+        // ── 6. Stream result immediately (challenges load after) ──────────────
         const researchedUrls = new Set(vendorData.filter(v => v.researched).map(v => v.url));
         const vendorsWithFlags = baseAnalysis.top_vendors.map(v => ({
           ...v,
@@ -163,18 +102,60 @@ export async function POST(req: NextRequest) {
         const finalResult = {
           ...baseAnalysis,
           top_vendors: vendorsWithFlags,
-          top_build_challenges: topBuildChallenges,
+          top_build_challenges: [],
           llm_vs_deterministic: llmVsDet,
           next_steps: [],
+          persona_views: [],
         };
 
         console.log(t0(), "streaming final result");
         controller.enqueue(encode({ type: "result", data: finalResult }));
 
-        // ── 8. Next steps + DB persist + persona synthesis — all in parallel ──
-        console.log(t0(), "generating next steps, persona views, persisting...");
+        // ── 7. Post-result: challenges + next steps + personas + persist ───────
+        console.log(t0(), "starting post-result parallel work...");
 
-        // Start all 3 persona synthesis calls — stream each as it completes
+        const hardestItems = [...(baseAnalysis.build_feasibility_breakdown ?? [])]
+          .sort((a, b) => a.feasibility_score - b.feasibility_score)
+          .slice(0, 2);
+
+        // Signal how many challenges to expect
+        if (hardestItems.length > 0) {
+          controller.enqueue(encode({ type: "challenges_loading", challenges_count: hardestItems.length }));
+        }
+
+        // Challenge promises — each streams when done
+        const challengePromises = hardestItems.map(async (item, i) => {
+          console.log(t0(), `challenge[${i}] start: ${item.feature}`);
+          const componentRefs = await identifyComponents(enrichedProblem, item);
+          console.log(t0(), `challenge[${i}] components identified:`, componentRefs.map(c => c.component_name));
+
+          let componentData: { name: string; url: string; category: string; why_relevant: string; scraped_content: string }[] = [];
+          if (componentRefs.length > 0) {
+            const { scrape } = await import("@/lib/firecrawl");
+            const scrapeResults = await Promise.allSettled(
+              componentRefs.map(async (c) => {
+                console.log(t0(), `challenge[${i}] scraping: ${c.url}`);
+                const content = await scrape(c.url);
+                console.log(t0(), `challenge[${i}] scraped: ${c.url} (${content.length} chars)`);
+                return { name: c.component_name, url: c.url, category: c.category, why_relevant: c.why_relevant, scraped_content: content };
+              })
+            );
+            componentData = scrapeResults
+              .filter((r): r is PromiseFulfilledResult<typeof componentData[0]> => r.status === "fulfilled")
+              .map((r) => r.value);
+          }
+
+          console.log(t0(), `challenge[${i}] calling analyzeBuildChallenge...`);
+          const challenge = await Promise.race([
+            analyzeBuildChallenge(enrichedProblem, item, componentData),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`challenge[${i}] timed out`)), 50_000)),
+          ]);
+          console.log(t0(), `challenge[${i}] done: ${item.feature}`);
+          controller.enqueue(encode({ type: "challenge_result", challenge_result: challenge }));
+          return challenge;
+        });
+
+        // Persona synthesis — each streams when done
         const personas: Persona[] = ["exec", "product", "engineering"];
         const synthesisPromises = personas.map(persona =>
           Promise.race([
@@ -218,6 +199,7 @@ export async function POST(req: NextRequest) {
             new Promise<void>(resolve => setTimeout(resolve, 15_000)),
           ]),
           Promise.allSettled(synthesisPromises),
+          Promise.allSettled(challengePromises),
         ]);
 
         if (nextSteps.length > 0) {

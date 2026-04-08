@@ -152,10 +152,10 @@ export type StreamEventType =
   | "vendors_found"
   | "scraping_complete"
   | "analysis_complete"
-  | "challenge_start"
-  | "challenge_done"
   | "llm_analysis"
   | "result"
+  | "challenges_loading"
+  | "challenge_result"
   | "next_steps"
   | "persona_view"
   | "error";
@@ -164,9 +164,9 @@ export interface StreamEvent {
   type: StreamEventType;
   message?: string;
   vendors?: string[];
-  challenge_name?: string;
-  challenge_index?: number;
   data?: AnalysisResult;
+  challenges_count?: number;
+  challenge_result?: BuildChallenge;
   next_steps?: NextStep[];
   persona_view?: PersonaView;
   error?: string;

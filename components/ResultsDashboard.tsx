@@ -42,10 +42,12 @@ export default function ResultsDashboard({
   result,
   selectedPersona,
   onPersonaChange,
+  challengesExpected = 0,
 }: {
   result: AnalysisResult;
   selectedPersona: Persona;
   onPersonaChange: (p: Persona) => void;
+  challengesExpected?: number;
 }) {
   const activeView = result.persona_views?.find(v => v.persona === selectedPersona);
 
@@ -101,16 +103,32 @@ export default function ResultsDashboard({
         </ExpandableSection>
       )}
 
-      {/* Build challenge deep dives */}
-      {result.top_build_challenges?.length > 0 && (
+      {/* Build challenge deep dives — loads after main result */}
+      {(challengesExpected > 0 || result.top_build_challenges?.length > 0) && (
         <ExpandableSection
           title="Top Build Challenges"
-          summary={challengeSummary(result.top_build_challenges)}
+          summary={
+            result.top_build_challenges?.length > 0
+              ? challengeSummary(result.top_build_challenges)
+              : "Analyzing…"
+          }
           defaultOpen={false}
           badge="Deep dive"
           badgeColor="bg-orange-50 text-orange-600"
         >
-          <ChallengeDeepDive challenges={result.top_build_challenges} />
+          {result.top_build_challenges?.length > 0 ? (
+            <ChallengeDeepDive challenges={result.top_build_challenges} />
+          ) : (
+            <div className="space-y-3 animate-pulse py-2">
+              {Array.from({ length: challengesExpected || 1 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-1/3" />
+                  <div className="h-3 bg-muted rounded w-full" />
+                  <div className="h-3 bg-muted rounded w-4/5" />
+                </div>
+              ))}
+            </div>
+          )}
         </ExpandableSection>
       )}
 
