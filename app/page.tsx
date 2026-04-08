@@ -9,6 +9,7 @@ import DiscoveryPhase from "@/components/DiscoveryPhase";
 import AnalysisProgressBar from "@/components/AnalysisProgressBar";
 import ExportButton from "@/components/ExportButton";
 import PersonaSelector from "@/components/PersonaSelector";
+import AnalysisChat from "@/components/AnalysisChat";
 
 type Phase = "idle" | "generating_questions" | "discovery" | "analyzing" | "done" | "error";
 
@@ -35,6 +36,7 @@ export default function Home() {
   const [customVendors, setCustomVendors] = useState<string[]>([]);
 
   const [selectedPersona, setSelectedPersona] = useState<Persona>("exec");
+  const [chatOpen, setChatOpen] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -310,6 +312,15 @@ export default function Home() {
               <div className="flex items-center gap-2 shrink-0">
                 <ExportButton result={result} problem={problem} />
                 <button
+                  onClick={() => setChatOpen(true)}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  Ask AI
+                </button>
+                <button
                   onClick={handleReset}
                   className="text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors"
                 >
@@ -322,6 +333,16 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* Ask AI side panel */}
+      {result && (
+        <AnalysisChat
+          result={result}
+          problem={problem}
+          open={chatOpen}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </main>
   );
 }
