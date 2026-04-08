@@ -97,9 +97,16 @@ export async function POST(req: NextRequest) {
           researched: researchedUrls.has(v.url),
         }));
 
+        // Inject researched flag into vendor_shortlist too
+        const shortlistWithFlags = (baseAnalysis.vendor_shortlist ?? []).map(v => ({
+          ...v,
+          researched: researchedUrls.has(v.url),
+        }));
+
         const finalResult = {
           ...baseAnalysis,
           top_vendors: vendorsWithFlags,
+          vendor_shortlist: shortlistWithFlags,
           top_build_challenges: [],
           llm_vs_deterministic: [],
           next_steps: [],

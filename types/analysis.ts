@@ -54,6 +54,16 @@ export interface Vendor {
   researched: boolean; // true = site was scraped; false = found in search only
 }
 
+// ─── Vendor shortlist (all vendors evaluated, not just top picks) ─────────────
+
+export interface VendorShortlistItem {
+  name: string;
+  url: string;
+  fit_score: number;       // 1–10
+  verdict: string;         // one sentence: why included or ruled out
+  researched: boolean;
+}
+
 // ─── Feasibility matrix ───────────────────────────────────────────────────────
 
 export interface FeasibilityItem {
@@ -141,6 +151,7 @@ export interface AnalysisResult {
   top_build_challenges: BuildChallenge[];
   llm_vs_deterministic: LLMvsDetItem[];
   context_summary: string;
+  vendor_shortlist: VendorShortlistItem[];
   next_steps: NextStep[];
   persona_views: PersonaView[];
 }

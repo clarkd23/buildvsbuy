@@ -1,5 +1,6 @@
 import { AnalysisResult, Persona } from "@/types/analysis";
 import VendorCard from "./VendorCard";
+import VendorShortlist from "./VendorShortlist";
 import StrategyOptions from "./StrategyOptions";
 import ChallengeDeepDive from "./ChallengeDeepDive";
 import ExpandableSection from "./ExpandableSection";
@@ -137,10 +138,23 @@ export default function ResultsDashboard({
         </ExpandableSection>
       )}
 
-      {/* Vendors */}
+      {/* Vendor fit summary — all vendors scored */}
+      {result.vendor_shortlist?.length > 0 && (
+        <ExpandableSection
+          title="All Vendors Considered"
+          summary={`${result.vendor_shortlist.length} vendors scored · ${result.vendor_shortlist.filter(v => v.fit_score >= 7).length} strong fit · ${result.vendor_shortlist.filter(v => v.fit_score < 4).length} ruled out`}
+          defaultOpen={false}
+          badge="Fit scores"
+          badgeColor="bg-sky-50 text-sky-600"
+        >
+          <VendorShortlist vendors={result.vendor_shortlist} />
+        </ExpandableSection>
+      )}
+
+      {/* Vendors — deep-researched detail cards */}
       {result.top_vendors?.length > 0 && (
         <ExpandableSection
-          title="Vendors Researched"
+          title="Top Vendor Deep Dives"
           summary={vendorSummary(result.top_vendors)}
           defaultOpen={false}
         >

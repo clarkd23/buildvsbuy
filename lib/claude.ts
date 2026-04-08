@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { AnalysisResult, BuildChallenge, DiscoveryAnswer, DiscoveryQuestion, FeasibilityItem, LLMvsDetItem, Persona, PersonaView } from "@/types/analysis";
+import { AnalysisResult, BuildChallenge, DiscoveryAnswer, DiscoveryQuestion, FeasibilityItem, LLMvsDetItem, Persona, PersonaView, VendorShortlistItem } from "@/types/analysis";
 
 const getClient = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -138,7 +138,7 @@ export async function generateSearchQuery(problemStatement: string): Promise<str
 export async function analyzeVendors(
   problemStatement: string,
   vendorData: { name: string; url: string; content: string }[]
-): Promise<Omit<AnalysisResult, "top_build_challenges" | "llm_vs_deterministic">> {
+): Promise<Omit<AnalysisResult, "top_build_challenges" | "llm_vs_deterministic" | "next_steps" | "persona_views">> {
   const vendorContext = vendorData
     .map((v, i) => `--- VENDOR ${i + 1}: ${v.name} (${v.url}) ---\n${v.content.slice(0, 4000)}\n`)
     .join("\n");
@@ -205,8 +205,26 @@ Respond with ONLY valid JSON:
       "notes": "One sentence"
     }
   ],
+  "vendor_shortlist": [
+    {
+      "name": "HubSpot",
+      "url": "https://hubspot.com",
+      "fit_score": 8,
+      "verdict": "Strong fit — covers core requirements with native integrations at the right price point",
+      "researched": true
+    },
+    {
+      "name": "Salesforce",
+      "url": "https://salesforce.com",
+      "fit_score": 3,
+      "verdict": "Ruled out — significantly over-engineered and over-priced for this team size and timeline",
+      "researched": true
+    }
+  ],
   "context_summary": "One paragraph framing the decision space and what makes this problem interesting."
-}`;
+}
+
+Rate EVERY vendor you were given in vendor_shortlist — include all of them, not just the top picks. For unresearched vendors (no scraped content), give your best assessment based on what you know about the product.`;
 
   const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
