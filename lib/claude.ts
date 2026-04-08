@@ -48,13 +48,13 @@ export async function generateDiscoveryQuestions(
 ): Promise<DiscoveryQuestion[]> {
   const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
-    max_tokens: 6000,
+    max_tokens: 3000,
     system: `You are a senior software consultant running a discovery session before a build-vs-buy analysis. Your job is to ask the exact questions that would most change the recommendation.
 
-Assess the complexity of the problem and generate between 1 and 20 questions accordingly:
-- Simple, well-defined problems: 3–6 questions
-- Moderate complexity: 7–12 questions
-- Complex, multi-system or enterprise problems: 13–20 questions
+Assess the complexity of the problem and generate between 1 and 10 questions accordingly:
+- Simple, well-defined problems: 2–3 questions
+- Moderate complexity: 4–6 questions
+- Complex, multi-system or enterprise problems: 7–10 questions
 
 Cover the dimensions that most affect build vs buy decisions:
 - Scale & volume (users, requests, data)
