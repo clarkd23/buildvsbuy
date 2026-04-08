@@ -1,6 +1,7 @@
 "use client";
 
 import { DiscoveryQuestion } from "@/types/analysis";
+import VendorPicker from "./VendorPicker";
 
 const categoryColors: Record<string, string> = {
   Scale: "bg-blue-50 text-blue-600",
@@ -21,9 +22,11 @@ interface Props {
   onAnswerChange: (id: number, value: string) => void;
   onSubmit: () => void;
   loading: boolean;
+  customVendors: string[];
+  onVendorsChange: (vendors: string[]) => void;
 }
 
-export default function DiscoveryPhase({ questions, answers, onAnswerChange, onSubmit, loading }: Props) {
+export default function DiscoveryPhase({ questions, answers, onAnswerChange, onSubmit, loading, customVendors, onVendorsChange }: Props) {
   const answeredCount = Object.values(answers).filter((a) => a.trim()).length;
   const required = Math.ceil(questions.length * 0.5);
   const canSubmit = answeredCount >= required;
@@ -115,6 +118,11 @@ export default function DiscoveryPhase({ questions, answers, onAnswerChange, onS
             </div>
           );
         })}
+      </div>
+
+      {/* Vendor picker */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden mb-6">
+        <VendorPicker vendors={customVendors} onChange={onVendorsChange} />
       </div>
 
       <div className="flex items-center justify-between">

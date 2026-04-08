@@ -4,8 +4,8 @@ function getFirecrawl() {
   return new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
 }
 
-const SEARCH_LIMIT = 10;  // vendors found in search
-const SCRAPE_LIMIT = 4;   // vendors deep-researched (scraped)
+const SEARCH_LIMIT = 15;  // vendors found in search
+const SCRAPE_LIMIT = 6;   // vendors deep-researched (scraped)
 
 export interface VendorSearchResult {
   name: string;
@@ -37,6 +37,21 @@ export async function searchVendors(query: string): Promise<VendorSearchResult[]
       name: r.title?.split(/[-|]/)[0].trim() || new URL(r.url!).hostname,
       url: r.url!,
     }));
+}
+
+export async function searchVendorUrl(name: string): Promise<VendorSearchResult | null> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await getFirecrawl().search(`${name} software official site`, { limit: 1 }) as any;
+    const result = response.web?.[0];
+    if (!result?.url) return null;
+    return {
+      name,
+      url: result.url,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function scrape(url: string): Promise<string> {

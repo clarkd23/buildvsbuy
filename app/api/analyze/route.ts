@@ -10,7 +10,7 @@ import {
   synthesizeForPersona,
 } from "@/lib/claude";
 import { Persona } from "@/types/analysis";
-import { searchVendors, scrapeVendors } from "@/lib/firecrawl";
+import { searchVendors, scrapeVendors, searchVendorUrl } from "@/lib/firecrawl";
 import { DiscoveryAnswer, StreamEvent } from "@/types/analysis";
 import { getOrCreateUser, incrementUsage } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
@@ -29,9 +29,10 @@ export async function POST(req: NextRequest) {
   // if (!userId) return new Response("Unauthorized", { status: 401 });
   const { userId } = { userId: "anonymous" };
 
-  const { problemStatement, answers } = await req.json() as {
+  const { problemStatement, answers, customVendors } = await req.json() as {
     problemStatement: string;
     answers?: DiscoveryAnswer[];
+    customVendors?: string[];
   };
   if (!problemStatement?.trim()) {
     return new Response("Problem statement is required", { status: 400 });
@@ -62,6 +63,19 @@ export async function POST(req: NextRequest) {
           vendors: vendors.map((v) => v.name),
           message: `Found ${vendors.length} vendors`,
         }));
+
+        // ── 2b. Prepend any user-specified vendors (look up URLs in parallel) ──
+        if (customVendors?.length) {
+          controller.enqueue(encode({ type: "status", message: `Looking up ${customVendors.length} custom vendor(s)...` }));
+          const customResults = await Promise.all(customVendors.map(name => searchVendorUrl(name)));
+          const found = customResults.filter((v): v is NonNullable<typeof v> => v !== null);
+          // Prepend so they're always in the scrape window; dedupe by url
+          const existingUrls = new Set(vendors.map(v => v.url));
+          for (const v of found.reverse()) {
+            if (!existingUrls.has(v.url)) { vendors.unshift(v); existingUrls.add(v.url); }
+          }
+          console.log(t0(), "custom vendors resolved:", found.map(v => v.name));
+        }
 
         // ── 3. Scrape vendor sites (top 6 deep; rest found-only) ─────────────
         controller.enqueue(encode({ type: "status", message: "Deep researching vendor websites..." }));

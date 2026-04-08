@@ -32,6 +32,7 @@ export default function Home() {
   const [statusMessages, setStatusMessages] = useState<string[]>([]);
   const [vendors, setVendors] = useState<string[]>([]);
   const [challengesExpected, setChallengesExpected] = useState(0);
+  const [customVendors, setCustomVendors] = useState<string[]>([]);
 
   const [selectedPersona, setSelectedPersona] = useState<Persona>("exec");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -100,7 +101,7 @@ export default function Home() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ problemStatement: problem, answers: discoveryAnswers }),
+        body: JSON.stringify({ problemStatement: problem, answers: discoveryAnswers, customVendors }),
       });
 
       if (!response.ok) throw new Error("Request failed");
@@ -170,6 +171,7 @@ export default function Home() {
     setStatusMessages([]);
     setVendors([]);
     setChallengesExpected(0);
+    setCustomVendors([]);
     setResult(null);
     setErrorMsg("");
     setSelectedPersona("exec");
@@ -248,6 +250,8 @@ export default function Home() {
               onAnswerChange={(id, val) => setAnswers((prev) => ({ ...prev, [id]: val }))}
               onSubmit={handleDiscoverySubmit}
               loading={false}
+              customVendors={customVendors}
+              onVendorsChange={setCustomVendors}
             />
           </div>
         )}
