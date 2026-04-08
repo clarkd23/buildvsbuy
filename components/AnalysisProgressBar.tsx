@@ -17,7 +17,7 @@ export default function AnalysisProgressBar({ done }: { done: boolean }) {
     if (done) { setProgress(100); return; }
 
     const start = Date.now();
-    const DURATION = 230_000; // ~230s (~4 mins) to reach 90%
+    const DURATION = 150_000; // ~150s (~2.5 mins) to reach 90%
 
     const tick = () => {
       const elapsed = Date.now() - start;
