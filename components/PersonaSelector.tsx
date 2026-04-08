@@ -2,10 +2,10 @@
 
 import { Persona } from "@/types/analysis";
 
-const PERSONAS: { id: Persona; label: string; description: string; icon: string }[] = [
-  { id: "exec",        label: "Executive",   description: "Cost, risk & decision",        icon: "◆" },
-  { id: "product",     label: "Product",     description: "Features, vendors & roadmap",  icon: "◈" },
-  { id: "engineering", label: "Engineering", description: "Build complexity & stack",     icon: "◇" },
+const PERSONAS: { id: Persona; label: string; description: string }[] = [
+  { id: "exec",        label: "Executive",   description: "Cost, risk & decision" },
+  { id: "product",     label: "Product",     description: "Features & vendors" },
+  { id: "engineering", label: "Engineering", description: "Build complexity & stack" },
 ];
 
 export default function PersonaSelector({
@@ -16,9 +16,9 @@ export default function PersonaSelector({
   onChange: (p: Persona) => void;
 }) {
   return (
-    <div className="px-5 py-3 border-t border-gray-100">
-      <p className="text-xs text-gray-400 mb-2">Who&apos;s reading this analysis?</p>
-      <div className="flex gap-2">
+    <div className="px-5 py-4 border-t border-border">
+      <p className="text-xs font-medium text-muted-foreground mb-3">Who&apos;s reading this analysis?</p>
+      <div className="grid grid-cols-3 gap-2">
         {PERSONAS.map((p) => {
           const active = selected === p.id;
           return (
@@ -26,15 +26,16 @@ export default function PersonaSelector({
               key={p.id}
               type="button"
               onClick={() => onChange(p.id)}
-              className={`flex-1 flex flex-col items-start px-3 py-2 rounded-xl border text-left transition-all ${
+              className={`flex flex-col items-start px-3.5 py-3 rounded-xl border text-left transition-all ${
                 active
-                  ? "border-gray-900 bg-gray-900 text-white"
-                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+                  ? "border-foreground bg-foreground text-background shadow-sm"
+                  : "border-border bg-background text-foreground hover:border-foreground/30 hover:bg-muted/40"
               }`}
             >
-              <span className={`text-base mb-0.5 ${active ? "text-white" : "text-gray-400"}`}>{p.icon}</span>
-              <span className="text-xs font-semibold leading-tight">{p.label}</span>
-              <span className={`text-xs leading-tight mt-0.5 ${active ? "text-gray-300" : "text-gray-400"}`}>
+              <span className={`text-xs font-semibold leading-tight ${active ? "text-background" : "text-foreground"}`}>
+                {p.label}
+              </span>
+              <span className={`text-[11px] leading-tight mt-0.5 ${active ? "text-background/70" : "text-muted-foreground"}`}>
                 {p.description}
               </span>
             </button>

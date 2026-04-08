@@ -182,45 +182,49 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 py-12">
+    <main className="min-h-screen bg-background">
+      <div className="max-w-5xl mx-auto px-4 py-14">
 
-        {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Build vs Buy</h1>
-          <p className="text-gray-500 text-lg">
-            AI researches the market and lays out the honest trade-offs — no verdict, just facts.
-          </p>
-        </div>
+        {/* ── Hero ── */}
+        {(phase === "idle" || phase === "generating_questions") && (
+          <div className="text-center mb-10">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3">
+              Should you build it or buy it?
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+              Describe what you need. AI researches the market, evaluates vendors, and maps the honest trade-offs.
+            </p>
+          </div>
+        )}
 
         {/* ── Problem input ── */}
         {(phase === "idle" || phase === "generating_questions") && (
           <form onSubmit={handleProblemSubmit} className="mb-8">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
               <textarea
                 ref={textareaRef}
                 value={problem}
                 onChange={(e) => setProblem(e.target.value)}
                 placeholder="e.g. We need software to automate customer support ticket routing and auto-generate replies using our knowledge base..."
-                className="w-full p-5 text-gray-800 placeholder-gray-400 resize-none focus:outline-none text-base leading-relaxed"
+                className="w-full px-5 pt-5 pb-3 text-foreground placeholder-muted-foreground/60 resize-none focus:outline-none text-base leading-relaxed bg-transparent"
                 rows={4}
                 disabled={phase === "generating_questions"}
               />
               <PersonaSelector selected={selectedPersona} onChange={setSelectedPersona} />
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
-                <p className="text-xs text-gray-400">
+              <div className="flex items-center justify-between px-5 py-3 border-t border-border bg-muted/30">
+                <p className="text-xs text-muted-foreground">
                   {phase === "generating_questions"
                     ? "Generating discovery questions..."
-                    : "We'll ask a few questions before researching"}
+                    : "A few quick questions before we start researching"}
                 </p>
                 <button
                   type="submit"
                   disabled={!problem.trim() || phase === "generating_questions"}
-                  className="bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  className="bg-foreground text-background px-5 py-2 rounded-lg text-sm font-medium hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
                 >
                   {phase === "generating_questions" ? (
                     <span className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-white opacity-70 animate-pulse inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-background/70 animate-pulse inline-block" />
                       Thinking...
                     </span>
                   ) : "Continue →"}
@@ -233,12 +237,12 @@ export default function Home() {
         {/* ── Discovery phase ── */}
         {phase === "discovery" && (
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-5">
               <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Analyzing</p>
-                <p className="text-gray-700 font-medium truncate max-w-xl">{problem}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Analyzing</p>
+                <p className="text-foreground font-medium truncate max-w-xl">{problem}</p>
               </div>
-              <button onClick={handleReset} className="text-xs text-gray-400 hover:text-gray-600">
+              <button onClick={handleReset} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                 Start over
               </button>
             </div>
@@ -254,35 +258,34 @@ export default function Home() {
 
         {/* ── Analysis progress ── */}
         {phase === "analyzing" && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-4 h-4 rounded-full bg-blue-500 animate-pulse" />
-              <span className="font-medium text-gray-700">Researching the market...</span>
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-6 mb-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-3.5 h-3.5 rounded-full bg-primary animate-pulse" />
+              <span className="font-semibold text-foreground">Researching the market...</span>
             </div>
 
             <AnalysisProgressBar done={false} />
 
-            <div className="space-y-2 mb-4">
+            <div className="space-y-2 mb-4 mt-4">
               {statusMessages.map((msg, i) => (
-                <div key={i} className="flex items-center gap-2 text-sm text-gray-500">
-                  <span className="text-green-500">✓</span>{msg}
+                <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="text-emerald-500 font-medium">✓</span>{msg}
                 </div>
               ))}
             </div>
 
-
             {Object.keys(activeChallenges).length > 0 && (
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2">Deep diving build challenges</p>
-                <div className="space-y-1">
+              <div className="mt-2">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Deep diving build challenges</p>
+                <div className="space-y-1.5">
                   {Object.entries(activeChallenges).map(([idx, name]) => {
                     const done = doneChallenges.includes(Number(idx));
                     return (
                       <div key={idx} className="flex items-center gap-2 text-sm">
                         {done
-                          ? <span className="text-green-500">✓</span>
-                          : <div className="w-3 h-3 rounded-full bg-purple-400 animate-pulse" />}
-                        <span className={done ? "text-gray-400" : "text-gray-700"}>{name}</span>
+                          ? <span className="text-emerald-500">✓</span>
+                          : <div className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-pulse" />}
+                        <span className={done ? "text-muted-foreground" : "text-foreground"}>{name}</span>
                       </div>
                     );
                   })}
@@ -294,18 +297,15 @@ export default function Home() {
 
         {/* ── Error ── */}
         {phase === "error" && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-8">
-            <p className="text-red-700 font-medium mb-1">Something went wrong</p>
-            <p className="text-red-600 text-sm mb-4">{errorMsg}</p>
+          <div className="bg-destructive/5 border border-destructive/20 rounded-2xl p-6 mb-8">
+            <p className="text-destructive font-semibold mb-1">Something went wrong</p>
+            <p className="text-destructive/80 text-sm mb-4">{errorMsg}</p>
             <div className="flex items-center gap-4">
-              <button onClick={handleReset} className="text-sm text-red-700 underline">
+              <button onClick={handleReset} className="text-sm text-destructive underline underline-offset-2">
                 Start over
               </button>
               {problem.trim() && (
-                <button
-                  onClick={() => startAnalysis([])}
-                  className="text-sm text-gray-600 underline"
-                >
+                <button onClick={() => startAnalysis([])} className="text-sm text-muted-foreground underline underline-offset-2">
                   Skip discovery and analyze anyway
                 </button>
               )}
@@ -316,21 +316,21 @@ export default function Home() {
         {/* ── Results ── */}
         {phase === "done" && result && (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-start justify-between mb-7 gap-4">
               <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Analysis for</p>
-                <p className="text-gray-700 font-medium truncate max-w-xl">{problem}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Analysis for</p>
+                <p className="text-foreground font-semibold truncate max-w-xl">{problem}</p>
                 {questions.length > 0 && (
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {Object.values(answers).filter(a => a.trim()).length} discovery answers incorporated
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <ExportButton result={result} problem={problem} />
                 <button
                   onClick={handleReset}
-                  className="text-sm text-gray-500 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors"
                 >
                   New analysis
                 </button>

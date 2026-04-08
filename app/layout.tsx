@@ -29,14 +29,19 @@ export default function RootLayout({
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col">
-          <header className="border-b border-gray-100 bg-white">
+        <body className="min-h-full flex flex-col bg-background">
+          <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-              <span className="font-semibold text-gray-900 text-sm">Build vs Buy</span>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center">
+                  <span className="text-background text-[10px] font-bold">B</span>
+                </div>
+                <span className="font-semibold text-foreground text-sm tracking-tight">Build vs Buy</span>
+              </div>
               <div className="flex items-center gap-3">
                 <Show when="signed-out">
                   <SignInButton>
-                    <button className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors">
+                    <button className="text-sm text-muted-foreground hover:text-foreground font-medium transition-colors">
                       Sign in
                     </button>
                   </SignInButton>
