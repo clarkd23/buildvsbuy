@@ -46,7 +46,7 @@ export default function ShareCard({ result, problem, cardRef }: Props) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "36px" }}>
           <div>
             <div style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.2em", color: "#6366f1", textTransform: "uppercase", marginBottom: "8px" }}>
-              Buy vs Build Analysis
+              Buy or Build Analysis
             </div>
             <div style={{ fontSize: "28px", fontWeight: 800, color: "#ffffff", lineHeight: 1.3, maxWidth: "900px" }}>
               {truncatedProblem}
@@ -117,10 +117,10 @@ export default function ShareCard({ result, problem, cardRef }: Props) {
         {/* Footer */}
         <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: "12px", color: "#4b5563" }}>
-            AI-powered buy vs build research
+            AI-powered buy or build research
           </div>
           <div style={{ fontSize: "14px", fontWeight: 700, color: "#6366f1", letterSpacing: "0.05em" }}>
-            buyvsbuild.ai
+            buyorbuild.ai
           </div>
         </div>
       </div>

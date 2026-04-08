@@ -184,7 +184,7 @@ export default function Home() {
         {(phase === "idle" || phase === "generating_questions") && (
           <div className="text-center mb-10">
             <div className="flex items-center justify-center gap-1.5 mb-4">
-              <span className="text-3xl font-bold tracking-tight text-foreground">buyvsbuild</span>
+              <span className="text-3xl font-bold tracking-tight text-foreground">buyorbuild</span>
               <span className="text-3xl font-bold tracking-tight text-muted-foreground">.ai</span>
             </div>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
