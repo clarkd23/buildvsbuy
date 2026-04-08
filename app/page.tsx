@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnalysisResult, DiscoveryAnswer, DiscoveryQuestion, StreamEvent } from "@/types/analysis";
 import ResultsDashboard from "@/components/ResultsDashboard";
 import DiscoveryPhase from "@/components/DiscoveryPhase";
+import AnalysisProgressBar from "@/components/AnalysisProgressBar";
 
 type Phase = "idle" | "generating_questions" | "discovery" | "analyzing" | "done" | "error";
 
@@ -233,6 +234,8 @@ export default function Home() {
               <span className="font-medium text-gray-700">Researching the market...</span>
             </div>
 
+            <AnalysisProgressBar done={false} />
+
             <div className="space-y-2 mb-4">
               {statusMessages.map((msg, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-gray-500">
@@ -241,16 +244,6 @@ export default function Home() {
               ))}
             </div>
 
-            {vendors.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold mb-2">Vendors found</p>
-                <div className="flex flex-wrap gap-2">
-                  {vendors.map((v, i) => (
-                    <span key={i} className="bg-blue-50 text-blue-700 text-sm rounded-full px-3 py-1">{v}</span>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {Object.keys(activeChallenges).length > 0 && (
               <div>
