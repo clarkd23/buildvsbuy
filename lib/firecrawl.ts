@@ -1,6 +1,8 @@
 import FirecrawlApp from "@mendable/firecrawl-js";
 
-const firecrawl = new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+function getFirecrawl() {
+  return new FirecrawlApp({ apiKey: process.env.FIRECRAWL_API_KEY });
+}
 
 const SEARCH_LIMIT = 10;  // vendors found in search
 const SCRAPE_LIMIT = 6;   // vendors deep-researched (scraped)
@@ -19,7 +21,7 @@ export interface VendorScrapeResult {
 
 export async function searchVendors(query: string): Promise<VendorSearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await firecrawl.search(query, { limit: SEARCH_LIMIT }) as any;
+  const response = await getFirecrawl().search(query, { limit: SEARCH_LIMIT }) as any;
 
   if (response.success === false) {
     throw new Error(`Firecrawl search error: ${response.error ?? "unknown"}`);
@@ -38,7 +40,7 @@ export async function searchVendors(query: string): Promise<VendorSearchResult[]
 }
 
 export async function scrape(url: string): Promise<string> {
-  const response = await firecrawl.scrape(url, { formats: ["markdown"] });
+  const response = await getFirecrawl().scrape(url, { formats: ["markdown"] });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (response as any).markdown ?? "";
 }
@@ -51,7 +53,7 @@ export async function scrapeVendors(vendors: VendorSearchResult[]): Promise<Vend
   const scraped = await Promise.allSettled(
     toScrape.map(async (vendor) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await firecrawl.scrape(vendor.url, { formats: ["markdown"] }) as any;
+      const response = await getFirecrawl().scrape(vendor.url, { formats: ["markdown"] }) as any;
       return {
         name: vendor.name,
         url: vendor.url,

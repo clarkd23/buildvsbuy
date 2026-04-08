@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { AnalysisResult, BuildChallenge, DiscoveryAnswer, DiscoveryQuestion, FeasibilityItem, LLMvsDetItem } from "@/types/analysis";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const getClient = () => new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 // Extract the first complete JSON object or array using bracket balancing.
 // Handles trailing text, leading prose, and markdown code fences.
@@ -46,7 +46,7 @@ function parseJSON<T>(text: string): T {
 export async function generateDiscoveryQuestions(
   problemStatement: string
 ): Promise<DiscoveryQuestion[]> {
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 6000,
     system: `You are a senior software consultant running a discovery session before a build-vs-buy analysis. Your job is to ask the exact questions that would most change the recommendation.
@@ -121,7 +121,7 @@ export function buildEnrichedContext(
 // ─── Step 1: Generate optimized vendor search query ──────────────────────────
 
 export async function generateSearchQuery(problemStatement: string): Promise<string> {
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 100,
     messages: [{
@@ -208,7 +208,7 @@ Respond with ONLY valid JSON:
   "context_summary": "One paragraph framing the decision space and what makes this problem interesting."
 }`;
 
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 8096,
     system,
@@ -229,7 +229,7 @@ export async function identifyComponents(
   problemStatement: string,
   item: FeasibilityItem
 ): Promise<{ component_name: string; url: string; category: string; why_relevant: string }[]> {
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 512,
     messages: [{
@@ -269,7 +269,7 @@ export async function analyzeBuildChallenge(
       ).join("\n")
     : "No component data available.";
 
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 4096,
     system: `You are a senior software engineer and AI tooling expert. Give an honest, technically grounded assessment of a build challenge — including exactly which off-the-shelf components change the picture and how.
@@ -327,7 +327,7 @@ export async function analyzeLLMvsDeterministic(
   problemStatement: string,
   features: string[]
 ): Promise<LLMvsDetItem[]> {
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-6",
     max_tokens: 4096,
     system: `You are an AI systems architect. For each feature of a software problem, determine whether it should be built with LLM inference, deterministic logic, or a hybrid — and what the eval strategy should be.
