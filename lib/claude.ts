@@ -157,7 +157,6 @@ export async function analyzeVendors(
 - Be equally rigorous across all options — do not inflate or deflate any path
 - Use real pricing from vendor research where available
 - Decompose into 3–6 feature tasks for the feasibility matrix, scoring each on scratch AND component build
-- next_steps must be specific to this problem — not generic ("run a POC with [specific vendor]", "interview 3 current users about X workflow", "get a quote from [vendor] for [tier]"). One per priority level. Priority must be exactly "Do this week", "Do this month", or "Consider later".
 
 ## AI Build Feasibility Reference (score 1–5)
 | Feature Type | Scratch | With Components |
@@ -206,24 +205,7 @@ Respond with ONLY valid JSON:
       "notes": "One sentence"
     }
   ],
-  "context_summary": "One paragraph framing the decision space and what makes this problem interesting.",
-  "next_steps": [
-    {
-      "action": "Specific, concrete action to take — not generic advice",
-      "rationale": "One sentence: why this is the right first move given the analysis",
-      "priority": "Do this week"
-    },
-    {
-      "action": "...",
-      "rationale": "...",
-      "priority": "Do this month"
-    },
-    {
-      "action": "...",
-      "rationale": "...",
-      "priority": "Consider later"
-    }
-  ]
+  "context_summary": "One paragraph framing the decision space and what makes this problem interesting."
 }`;
 
   const response = await getClient().messages.create({
@@ -339,7 +321,38 @@ Provide the full deep-dive analysis with component recommendations.`,
   catch { throw new Error(`Failed to parse challenge analysis for: ${item.feature}`); }
 }
 
-// ─── Step 4: LLM vs deterministic breakdown ───────────────────────────────────
+// ─── Step 4a: Next steps ─────────────────────────────────────────────────────
+
+export async function generateNextSteps(
+  problemStatement: string,
+  contextSummary: string,
+  optionTitles: string[]
+): Promise<import("@/types/analysis").NextStep[]> {
+  const response = await getClient().messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1024,
+    messages: [{
+      role: "user",
+      content: `Problem: "${problemStatement}"
+Context: ${contextSummary}
+Options identified: ${optionTitles.join(", ")}
+
+Generate exactly 3 specific next steps to move this decision forward. One per priority level.
+
+Return ONLY valid JSON array:
+[
+  { "action": "Specific action — use real names/tools", "rationale": "One sentence why", "priority": "Do this week" },
+  { "action": "...", "rationale": "...", "priority": "Do this month" },
+  { "action": "...", "rationale": "...", "priority": "Consider later" }
+]`,
+    }],
+  });
+  const block = response.content[0];
+  if (block.type !== "text") return [];
+  try { return parseJSON(block.text); } catch { return []; }
+}
+
+// ─── Step 4b: LLM vs deterministic breakdown ──────────────────────────────────
 
 export async function analyzeLLMvsDeterministic(
   problemStatement: string,
