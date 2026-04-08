@@ -22,7 +22,7 @@ export default function ExportButton({ result, problem }: { result: AnalysisResu
         logging: false,
       });
       const link = document.createElement("a");
-      link.download = "buildvsbuy-analysis.png";
+      link.download = "buyvsbuild-analysis.png";
       link.href = canvas.toDataURL("image/png");
       link.click();
     } finally {

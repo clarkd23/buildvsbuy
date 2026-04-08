@@ -107,7 +107,7 @@ export default function PricingPage() {
 
         <p className="text-center text-xs text-gray-400 mt-8">
           Questions?{" "}
-          <a href="mailto:hello@buildvsbuy.ai" className="underline hover:text-gray-600">
+          <a href="mailto:hello@buyvsbuild.ai" className="underline hover:text-gray-600">
             Get in touch
           </a>
         </p>

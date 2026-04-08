@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Build vs Buy",
+  title: "Buy vs Build",
   description: "AI researches the market and lays out the honest trade-offs.",
 };
 
@@ -33,10 +33,10 @@ export default function RootLayout({
           <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-foreground flex items-center justify-center">
-                  <span className="text-background text-[10px] font-bold">B</span>
+                <div className="w-8 h-6 rounded-md bg-foreground flex items-center justify-center">
+                  <span className="text-background text-[10px] font-bold">bvb</span>
                 </div>
-                <span className="font-semibold text-foreground text-sm tracking-tight">Build vs Buy</span>
+                <span className="font-semibold text-foreground text-sm tracking-tight">buyvsbuild<span className="text-muted-foreground">.ai</span></span>
               </div>
               <div className="flex items-center gap-3">
                 <Show when="signed-out">

@@ -188,9 +188,10 @@ export default function Home() {
         {/* ── Hero ── */}
         {(phase === "idle" || phase === "generating_questions") && (
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3">
-              Should you build it or buy it?
-            </h1>
+            <div className="flex items-center justify-center gap-1.5 mb-4">
+              <span className="text-3xl font-bold tracking-tight text-foreground">buyvsbuild</span>
+              <span className="text-3xl font-bold tracking-tight text-muted-foreground">.ai</span>
+            </div>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
               Describe what you need. AI researches the market, evaluates vendors, and maps the honest trade-offs.
             </p>

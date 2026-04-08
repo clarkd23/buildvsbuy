@@ -5,7 +5,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-lg w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to Build vs Buy</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to buyvsbuild.ai</h1>
           <p className="text-gray-500 text-sm">One thing before you dive in.</p>
         </div>
 

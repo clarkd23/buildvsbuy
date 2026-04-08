@@ -1,7 +1,7 @@
 import { Vendor } from "@/types/analysis";
 
 export default function VendorCard({ vendor, context }: { vendor: Vendor; context?: string }) {
-  const introHref = `mailto:clarkd23@gmail.com?subject=${encodeURIComponent(`Intro request: ${vendor.name}`)}&body=${encodeURIComponent(`Hi,\n\nI found ${vendor.name} while researching a build vs buy decision on buildvsbuy.ai.\n\n${context ? `Context: ${context}\n\n` : ""}I'd love an introduction. Could you help connect me?\n\nThanks`)}`;
+  const introHref = `mailto:clarkd23@gmail.com?subject=${encodeURIComponent(`Intro request: ${vendor.name}`)}&body=${encodeURIComponent(`Hi,\n\nI found ${vendor.name} while researching a build vs buy decision on buyvsbuild.ai.\n\n${context ? `Context: ${context}\n\n` : ""}I'd love an introduction. Could you help connect me?\n\nThanks`)}`;
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
