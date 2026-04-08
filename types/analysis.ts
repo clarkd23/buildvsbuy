@@ -142,6 +142,7 @@ export type StreamEventType =
   | "challenge_done"
   | "llm_analysis"
   | "result"
+  | "next_steps"
   | "error";
 
 export interface StreamEvent {
@@ -151,5 +152,6 @@ export interface StreamEvent {
   challenge_name?: string;
   challenge_index?: number;
   data?: AnalysisResult;
+  next_steps?: NextStep[];
   error?: string;
 }

@@ -349,7 +349,10 @@ Return ONLY valid JSON array:
   });
   const block = response.content[0];
   if (block.type !== "text") return [];
-  try { return parseJSON(block.text); } catch { return []; }
+  try { return parseJSON(block.text); } catch (err) {
+    console.error("[generateNextSteps] parse failed:", err, "raw:", block.text.slice(0, 200));
+    return [];
+  }
 }
 
 // ─── Step 4b: LLM vs deterministic breakdown ──────────────────────────────────

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encode({ type: "llm_analysis", message: "Analyzing LLM vs deterministic trade-offs..." }));
         console.log(t0(), "starting parallel: challenges", hardestItems.map(h => h.feature), "+ LLM analysis");
 
-        const [challengeResults, llmVsDet, nextSteps] = await Promise.all([
+        const [challengeResults, llmVsDet] = await Promise.all([
           Promise.allSettled(
             hardestItems.map(async (item, i) => {
               console.log(t0(), `challenge[${i}] start: ${item.feature}`);
@@ -138,16 +138,6 @@ export async function POST(req: NextRequest) {
               resolve([]);
             }, 45_000)),
           ]),
-          Promise.race([
-            generateNextSteps(enrichedProblem, baseAnalysis.context_summary, baseAnalysis.options.map(o => o.title)).then(r => {
-              console.log(t0(), "next steps done");
-              return r;
-            }),
-            new Promise<[]>(resolve => setTimeout(() => {
-              console.log(t0(), "next steps timed out — skipping");
-              resolve([]);
-            }, 30_000)),
-          ]),
         ]);
 
         console.log(t0(), "all parallel work complete");
@@ -168,11 +158,23 @@ export async function POST(req: NextRequest) {
           top_vendors: vendorsWithFlags,
           top_build_challenges: topBuildChallenges,
           llm_vs_deterministic: llmVsDet,
-          next_steps: nextSteps,
+          next_steps: [],
         };
 
         console.log(t0(), "streaming final result");
         controller.enqueue(encode({ type: "result", data: finalResult }));
+
+        // ── 8. Generate next steps after result is streamed ───────────────────
+        console.log(t0(), "generating next steps...");
+        const nextSteps = await generateNextSteps(
+          enrichedProblem,
+          baseAnalysis.context_summary,
+          baseAnalysis.options.map(o => o.title)
+        );
+        console.log(t0(), "next steps done, count:", nextSteps.length);
+        if (nextSteps.length > 0) {
+          controller.enqueue(encode({ type: "next_steps", next_steps: nextSteps }));
+        }
 
         // Persist analysis + fire lead webhook after stream closes
         after(async () => {

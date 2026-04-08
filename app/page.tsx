@@ -136,6 +136,11 @@ export default function Home() {
       case "result":
         if (event.data) { setResult(event.data); setPhase("done"); }
         break;
+      case "next_steps":
+        if (event.next_steps) {
+          setResult(prev => prev ? { ...prev, next_steps: event.next_steps! } : prev);
+        }
+        break;
       case "error":
         setErrorMsg(event.error || "Unknown error");
         setPhase("error");
