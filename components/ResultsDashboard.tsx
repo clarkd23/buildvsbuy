@@ -2,7 +2,6 @@ import { AnalysisResult, Persona } from "@/types/analysis";
 import VendorCard from "./VendorCard";
 import StrategyOptions from "./StrategyOptions";
 import ChallengeDeepDive from "./ChallengeDeepDive";
-import LLMvsDetSection from "./LLMvsDetSection";
 import ExpandableSection from "./ExpandableSection";
 import NextStepsSection from "./NextStepsSection";
 import PersonaViewCard from "./PersonaView";
@@ -23,13 +22,6 @@ function challengeSummary(challenges: AnalysisResult["top_build_challenges"]) {
   if (partial) parts.push(`${partial} partial`);
   if (human) parts.push(`${human} needs humans`);
   return `${challenges.length} challenges · ${parts.join(" · ")}`;
-}
-
-function llmSummary(items: AnalysisResult["llm_vs_deterministic"]) {
-  if (!items?.length) return "";
-  const llm = items.filter(i => i.approach !== "Deterministic").length;
-  const evals = items.filter(i => i.needs_evals).length;
-  return `${items.length} features · ${llm} LLM-powered · ${evals} need evals`;
 }
 
 function vendorSummary(vendors: AnalysisResult["top_vendors"]) {
@@ -132,20 +124,7 @@ export default function ResultsDashboard({
         </ExpandableSection>
       )}
 
-      {/* LLM vs deterministic */}
-      {result.llm_vs_deterministic?.length > 0 && (
-        <ExpandableSection
-          title="LLM vs Deterministic"
-          summary={llmSummary(result.llm_vs_deterministic)}
-          defaultOpen={false}
-          badge="Evals"
-          badgeColor="bg-purple-50 text-purple-600"
-        >
-          <LLMvsDetSection items={result.llm_vs_deterministic} />
-        </ExpandableSection>
-      )}
-
-      {/* Next steps */}
+{/* Next steps */}
       {result.next_steps?.length > 0 && (
         <ExpandableSection
           title="Recommended Next Steps"

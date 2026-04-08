@@ -5,7 +5,6 @@ import {
   analyzeVendors,
   identifyComponents,
   analyzeBuildChallenge,
-  analyzeLLMvsDeterministic,
   generateNextSteps,
   buildEnrichedContext,
   synthesizeForPersona,
@@ -75,22 +74,7 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encode({ type: "status", message: "Analyzing build vs buy trade-offs..." }));
         const baseAnalysis = await timeout(90_000, "analyzeVendors", analyzeVendors(enrichedProblem, vendorData));
         console.log(t0(), "baseAnalysis done, features:", baseAnalysis.build_feasibility_breakdown?.length);
-        controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done — analyzing LLM vs deterministic trade-offs..." }));
-
-        // ── 5. LLM analysis (before result streams) ───────────────────────────
-        const featureNames = baseAnalysis.build_feasibility_breakdown.map((f) => f.feature);
-        controller.enqueue(encode({ type: "llm_analysis", message: "Analyzing LLM vs deterministic trade-offs..." }));
-
-        const llmVsDet = await Promise.race([
-          analyzeLLMvsDeterministic(enrichedProblem, featureNames).then(r => {
-            console.log(t0(), "LLM analysis done");
-            return r;
-          }),
-          new Promise<[]>(resolve => setTimeout(() => {
-            console.log(t0(), "LLM analysis timed out — skipping");
-            resolve([]);
-          }, 45_000)),
-        ]);
+        controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done..." }));
 
         // ── 6. Stream result immediately (challenges load after) ──────────────
         const researchedUrls = new Set(vendorData.filter(v => v.researched).map(v => v.url));
@@ -103,7 +87,7 @@ export async function POST(req: NextRequest) {
           ...baseAnalysis,
           top_vendors: vendorsWithFlags,
           top_build_challenges: [],
-          llm_vs_deterministic: llmVsDet,
+          llm_vs_deterministic: [],
           next_steps: [],
           persona_views: [],
         };
