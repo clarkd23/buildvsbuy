@@ -15,6 +15,8 @@ import { prisma } from "@/lib/prisma";
 
 export const maxDuration = 180;
 
+const t0 = () => `[analyze +${((Date.now() - (globalThis as unknown as {_t0?: number})._t0!) / 1000).toFixed(1)}s]`;
+
 function encode(event: StreamEvent): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
 }
@@ -36,14 +38,18 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      (globalThis as unknown as {_t0?: number})._t0 = Date.now();
+      console.log("[analyze] start");
       try {
         // ── 1. Generate search query ──────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: "Generating vendor search query..." }));
         const searchQuery = await generateSearchQuery(problemStatement);
+        console.log(t0(), "searchQuery:", searchQuery);
 
         // ── 2. Search for vendors ─────────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: `Searching: "${searchQuery}"...` }));
         const vendors = await searchVendors(searchQuery);
+        console.log(t0(), "vendors found:", vendors.length);
         controller.enqueue(encode({
           type: "vendors_found",
           vendors: vendors.map((v) => v.name),
@@ -54,11 +60,13 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encode({ type: "status", message: "Deep researching vendor websites..." }));
         const vendorData = await scrapeVendors(vendors);
         const researchedCount = vendorData.filter(v => v.researched).length;
+        console.log(t0(), "scraping complete:", researchedCount, "researched");
         controller.enqueue(encode({ type: "scraping_complete", message: `${vendors.length} vendors found · ${researchedCount} deep researched` }));
 
         // ── 4. Main analysis ──────────────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: "Analyzing build vs buy trade-offs..." }));
         const baseAnalysis = await analyzeVendors(enrichedProblem, vendorData);
+        console.log(t0(), "baseAnalysis done, features:", baseAnalysis.build_feasibility_breakdown?.length);
         controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done — diving into top build challenges..." }));
 
         // ── 5+6. Challenges + LLM analysis all in parallel ───────────────────
@@ -78,18 +86,23 @@ export async function POST(req: NextRequest) {
           }));
         });
         controller.enqueue(encode({ type: "llm_analysis", message: "Analyzing LLM vs deterministic trade-offs..." }));
+        console.log(t0(), "starting parallel: challenges", hardestItems.map(h => h.feature), "+ LLM analysis");
 
         const [challengeResults, llmVsDet] = await Promise.all([
           Promise.allSettled(
             hardestItems.map(async (item, i) => {
+              console.log(t0(), `challenge[${i}] start: ${item.feature}`);
               const componentRefs = await identifyComponents(enrichedProblem, item);
+              console.log(t0(), `challenge[${i}] components identified:`, componentRefs.map(c => c.component_name));
 
               let componentData: { name: string; url: string; category: string; why_relevant: string; scraped_content: string }[] = [];
               if (componentRefs.length > 0) {
                 const { scrape } = await import("@/lib/firecrawl");
                 const scrapeResults = await Promise.allSettled(
                   componentRefs.map(async (c) => {
+                    console.log(t0(), `challenge[${i}] scraping: ${c.url}`);
                     const content = await scrape(c.url);
+                    console.log(t0(), `challenge[${i}] scraped: ${c.url} (${content.length} chars)`);
                     return { name: c.component_name, url: c.url, category: c.category, why_relevant: c.why_relevant, scraped_content: content };
                   })
                 );
@@ -98,7 +111,12 @@ export async function POST(req: NextRequest) {
                   .map((r) => r.value);
               }
 
-              const challenge = await analyzeBuildChallenge(enrichedProblem, item, componentData);
+              console.log(t0(), `challenge[${i}] calling analyzeBuildChallenge...`);
+              const challenge = await Promise.race([
+                analyzeBuildChallenge(enrichedProblem, item, componentData),
+                new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`challenge[${i}] timed out`)), 50_000)),
+              ]);
+              console.log(t0(), `challenge[${i}] done: ${item.feature}`);
 
               controller.enqueue(encode({
                 type: "challenge_done",
@@ -109,8 +127,19 @@ export async function POST(req: NextRequest) {
               return challenge;
             })
           ),
-          analyzeLLMvsDeterministic(enrichedProblem, featureNames),
+          Promise.race([
+            analyzeLLMvsDeterministic(enrichedProblem, featureNames).then(r => {
+              console.log(t0(), "LLM analysis done");
+              return r;
+            }),
+            new Promise<[]>(resolve => setTimeout(() => {
+              console.log(t0(), "LLM analysis timed out — skipping");
+              resolve([]);
+            }, 45_000)),
+          ]),
         ]);
+
+        console.log(t0(), "all parallel work complete");
 
         const topBuildChallenges = challengeResults
           .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof analyzeBuildChallenge>>> => r.status === "fulfilled")
@@ -130,6 +159,7 @@ export async function POST(req: NextRequest) {
           llm_vs_deterministic: llmVsDet,
         };
 
+        console.log(t0(), "streaming final result");
         controller.enqueue(encode({ type: "result", data: finalResult }));
 
         // Persist analysis + fire lead webhook after stream closes
@@ -164,6 +194,7 @@ export async function POST(req: NextRequest) {
 
       } catch (err) {
         const message = err instanceof Error ? err.message : "An unexpected error occurred";
+        console.error(t0(), "ERROR:", message);
         controller.enqueue(encode({ type: "error", error: message }));
       } finally {
         controller.close();
