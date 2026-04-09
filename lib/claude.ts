@@ -445,6 +445,39 @@ Respond with ONLY a valid JSON array:
   try { return parseJSON(block.text); } catch { return []; }
 }
 
+// ─── Reddit sentiment extraction ─────────────────────────────────────────────
+
+export async function extractRedditSentiment(
+  vendorName: string,
+  redditContent: string
+): Promise<{ pros: string[]; cons: string[] }> {
+  const response = await getClient().messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 400,
+    system: `Extract real user sentiment from Reddit discussions about ${vendorName}.
+
+Return ONLY valid JSON:
+{
+  "pros": ["top positive thing users say", "second positive", "third positive"],
+  "cons": ["top negative thing users say", "second negative", "third negative"]
+}
+
+Rules:
+- Each item must reflect a real theme from the content, not a generic platitude
+- Phrase as what users actually experienced (e.g. "Setup took less than a day", "Support takes weeks to respond")
+- If fewer than 3 pros or cons exist in the content, return what you have (minimum 1 each)`,
+    messages: [{
+      role: "user",
+      content: `Reddit discussions about ${vendorName}:\n\n${redditContent}`,
+    }],
+  });
+
+  const block = response.content[0];
+  if (block.type !== "text") return { pros: [], cons: [] };
+  try { return parseJSON<{ pros: string[]; cons: string[] }>(block.text); }
+  catch { return { pros: [], cons: [] }; }
+}
+
 // ─── Step 5: Persona synthesis ────────────────────────────────────────────────
 
 const PERSONA_CONFIG: Record<Persona, { label: string; focus: string }> = {

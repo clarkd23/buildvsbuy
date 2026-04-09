@@ -52,6 +52,8 @@ export interface Vendor {
   cons: string[];
   notable_features: string[];
   researched: boolean; // true = site was scraped; false = found in search only
+  reddit_pros?: string[];
+  reddit_cons?: string[];
 }
 
 // ─── Vendor shortlist (all vendors evaluated, not just top picks) ─────────────
@@ -169,6 +171,7 @@ export type StreamEventType =
   | "challenge_result"
   | "next_steps"
   | "persona_view"
+  | "vendor_reddit"
   | "share_id"
   | "error";
 
@@ -181,6 +184,7 @@ export interface StreamEvent {
   challenge_result?: BuildChallenge;
   next_steps?: NextStep[];
   persona_view?: PersonaView;
+  vendor_reddit?: { vendor_name: string; pros: string[]; cons: string[] };
   share_id?: string;
   error?: string;
 }

@@ -69,6 +69,42 @@ export default function VendorCard({ vendor, context }: { vendor: Vendor; contex
         </div>
       </div>
 
+      {(vendor.reddit_pros?.length || vendor.reddit_cons?.length) ? (
+        <div className="mb-3 border-t border-gray-100 pt-3">
+          <p className="text-xs font-semibold text-orange-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+            <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="10" r="10"/><path fill="white" d="M16.67 10a1.46 1.46 0 0 0-2.47-1 7.12 7.12 0 0 0-3.85-1.23l.65-3.08 2.13.45a1 1 0 1 0 .07-.5l-2.38-.5a.25.25 0 0 0-.3.19l-.73 3.44a7.14 7.14 0 0 0-3.89 1.23 1.46 1.46 0 1 0-1.61 2.39 2.87 2.87 0 0 0 0 .44c0 2.24 2.61 4.06 5.83 4.06s5.83-1.82 5.83-4.06a2.87 2.87 0 0 0 0-.44 1.46 1.46 0 0 0 .62-1.39zm-9.5 1a1 1 0 1 1 1 1 1 1 0 0 1-1-1zm5.58 2.64a3.57 3.57 0 0 1-2.75.89 3.57 3.57 0 0 1-2.75-.89.25.25 0 0 1 .35-.35 3.13 3.13 0 0 0 2.4.74 3.13 3.13 0 0 0 2.4-.74.25.25 0 0 1 .35.35zm-.17-1.64a1 1 0 1 1 1-1 1 1 0 0 1-1 1z"/></svg>
+            What Reddit says
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {vendor.reddit_pros && vendor.reddit_pros.length > 0 && (
+              <ul className="space-y-1">
+                {vendor.reddit_pros.map((p, i) => (
+                  <li key={i} className="text-xs text-gray-600 flex gap-1">
+                    <span className="text-green-500 mt-0.5 shrink-0">+</span>{p}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {vendor.reddit_cons && vendor.reddit_cons.length > 0 && (
+              <ul className="space-y-1">
+                {vendor.reddit_cons.map((c, i) => (
+                  <li key={i} className="text-xs text-gray-600 flex gap-1">
+                    <span className="text-red-400 mt-0.5 shrink-0">−</span>{c}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      ) : vendor.researched ? (
+        <div className="mb-3 border-t border-gray-100 pt-3">
+          <p className="text-xs text-gray-300 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse inline-block" />
+            Loading Reddit sentiment…
+          </p>
+        </div>
+      ) : null}
+
       {vendor.notable_features.length > 0 && (
         <div className="mb-3">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Key Features</p>

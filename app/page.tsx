@@ -162,6 +162,17 @@ export default function Home() {
           setResult(prev => prev ? { ...prev, next_steps: event.next_steps! } : prev);
         }
         break;
+      case "vendor_reddit":
+        if (event.vendor_reddit) {
+          const { vendor_name, pros, cons } = event.vendor_reddit;
+          setResult(prev => prev ? {
+            ...prev,
+            top_vendors: prev.top_vendors.map(v =>
+              v.name === vendor_name ? { ...v, reddit_pros: pros, reddit_cons: cons } : v
+            ),
+          } : prev);
+        }
+        break;
       case "share_id":
         if (event.share_id) {
           setShareId(event.share_id);

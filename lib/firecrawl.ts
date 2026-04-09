@@ -60,6 +60,28 @@ export async function scrape(url: string): Promise<string> {
   return (response as any).markdown ?? "";
 }
 
+export async function searchRedditReviews(vendorName: string): Promise<string> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await getFirecrawl().search(`site:reddit.com "${vendorName}" review experience`, { limit: 3 }) as any;
+    const urls: string[] = (response.web ?? [])
+      .filter((r: { url?: string }) => r.url?.includes("reddit.com/r/"))
+      .slice(0, 2)
+      .map((r: { url: string }) => r.url);
+
+    if (urls.length === 0) return "";
+
+    const scrapeResults = await Promise.allSettled(urls.map(url => scrape(url)));
+    return scrapeResults
+      .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+      .map(r => r.value)
+      .join("\n\n---\n\n")
+      .slice(0, 8000);
+  } catch {
+    return "";
+  }
+}
+
 // Scrapes the first SCRAPE_LIMIT vendors; the rest are returned as found-only.
 export async function scrapeVendors(vendors: VendorSearchResult[]): Promise<VendorScrapeResult[]> {
   const toScrape = vendors.slice(0, SCRAPE_LIMIT);

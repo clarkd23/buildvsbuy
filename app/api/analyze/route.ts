@@ -8,9 +8,10 @@ import {
   generateNextSteps,
   buildEnrichedContext,
   synthesizeForPersona,
+  extractRedditSentiment,
 } from "@/lib/claude";
 import { Persona } from "@/types/analysis";
-import { searchVendors, scrapeVendors, searchVendorUrl } from "@/lib/firecrawl";
+import { searchVendors, scrapeVendors, searchVendorUrl, searchRedditReviews } from "@/lib/firecrawl";
 import { DiscoveryAnswer, StreamEvent } from "@/types/analysis";
 import { getOrCreateUser, incrementUsage } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
@@ -188,6 +189,25 @@ export async function POST(req: NextRequest) {
           ])
         );
 
+        // Reddit sentiment — top 3 researched vendors in parallel
+        const redditMap = new Map<string, { pros: string[]; cons: string[] }>();
+        const redditPromises = vendorsWithFlags
+          .filter(v => v.researched)
+          .slice(0, 3)
+          .map(async (vendor) => {
+            try {
+              console.log(t0(), `reddit[${vendor.name}] searching...`);
+              const content = await searchRedditReviews(vendor.name);
+              if (!content) { console.log(t0(), `reddit[${vendor.name}] no content`); return; }
+              const sentiment = await extractRedditSentiment(vendor.name, content);
+              redditMap.set(vendor.name, sentiment);
+              console.log(t0(), `reddit[${vendor.name}] done (${sentiment.pros.length} pros, ${sentiment.cons.length} cons)`);
+              controller.enqueue(encode({ type: "vendor_reddit", vendor_reddit: { vendor_name: vendor.name, ...sentiment } }));
+            } catch (err) {
+              console.error(t0(), `reddit[${vendor.name}] failed:`, err instanceof Error ? err.message : err);
+            }
+          });
+
         const [nextSteps, , personaSettled, challengeSettled] = await Promise.all([
           Promise.race([
             generateNextSteps(
@@ -200,7 +220,7 @@ export async function POST(req: NextRequest) {
               resolve([]);
             }, 20_000)),
           ]),
-          Promise.resolve(), // placeholder slot
+          Promise.allSettled(redditPromises),
           Promise.allSettled(synthesisPromises),
           Promise.allSettled(challengePromises),
         ]);
@@ -209,7 +229,7 @@ export async function POST(req: NextRequest) {
           controller.enqueue(encode({ type: "next_steps", next_steps: nextSteps }));
         }
 
-        // Update the persisted record with the full result (challenges + personas + next steps)
+        // Update the persisted record with the full result (challenges + personas + next steps + reddit)
         if (analysisId) {
           try {
             const challenges = challengeSettled
@@ -219,11 +239,16 @@ export async function POST(req: NextRequest) {
               .filter((x): x is PromiseFulfilledResult<Awaited<typeof synthesisPromises[0]>> => x.status === "fulfilled")
               .map(x => x.value)
               .filter(Boolean);
+            const topVendorsWithReddit = finalResult.top_vendors.map(v => {
+              const reddit = redditMap.get(v.name);
+              return reddit ? { ...v, reddit_pros: reddit.pros, reddit_cons: reddit.cons } : v;
+            });
             await prisma.analysis.update({
               where: { id: analysisId },
               data: {
                 resultJson: {
                   ...finalResult,
+                  top_vendors: topVendorsWithReddit,
                   top_build_challenges: challenges,
                   persona_views: personaViews,
                   next_steps: nextSteps,
