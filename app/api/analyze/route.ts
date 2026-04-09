@@ -123,7 +123,6 @@ export async function POST(req: NextRequest) {
             data: { userId: null, problemStatement, resultJson: finalResult as object },
           });
           analysisId = record.id;
-          controller.enqueue(encode({ type: "share_id", share_id: analysisId }));
           console.log(t0(), "persisted analysis, id:", analysisId);
         } catch (err) {
           console.error("[analyze] initial persist failed:", err);
@@ -232,6 +231,7 @@ export async function POST(req: NextRequest) {
               },
             });
             console.log(t0(), "updated analysis with full result");
+            controller.enqueue(encode({ type: "share_id", share_id: analysisId }));
           } catch (err) {
             console.error("[analyze] update persist failed:", err);
           }
