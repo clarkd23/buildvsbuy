@@ -169,6 +169,7 @@ export type StreamEventType =
   | "challenge_result"
   | "next_steps"
   | "persona_view"
+  | "share_id"
   | "error";
 
 export interface StreamEvent {
@@ -180,5 +181,6 @@ export interface StreamEvent {
   challenge_result?: BuildChallenge;
   next_steps?: NextStep[];
   persona_view?: PersonaView;
+  share_id?: string;
   error?: string;
 }

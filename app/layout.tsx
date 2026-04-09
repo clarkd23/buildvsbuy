@@ -34,7 +34,7 @@ export default function RootLayout({
             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-6 rounded-md bg-foreground flex items-center justify-center">
-                  <span className="text-background text-[10px] font-bold">bvb</span>
+                  <span className="text-background text-[10px] font-bold">bob</span>
                 </div>
                 <span className="font-semibold text-foreground text-sm tracking-tight">buyorbuild<span className="text-muted-foreground">.ai</span></span>
               </div>

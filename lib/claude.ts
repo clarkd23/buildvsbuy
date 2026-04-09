@@ -140,7 +140,7 @@ export async function analyzeVendors(
   vendorData: { name: string; url: string; content: string }[]
 ): Promise<Omit<AnalysisResult, "top_build_challenges" | "llm_vs_deterministic" | "next_steps" | "persona_views">> {
   const vendorContext = vendorData
-    .map((v, i) => `--- VENDOR ${i + 1}: ${v.name} (${v.url}) ---\n${v.content.slice(0, 4000)}\n`)
+    .map((v, i) => `--- VENDOR ${i + 1}: ${v.name} (${v.url}) ---\n${v.content.slice(0, 2500)}\n`)
     .join("\n");
 
   const system = `You are a neutral software procurement analyst. Based on the problem and vendor research, generate 2–3 realistic strategic options a team could actually pursue. Do NOT force a Build vs Buy binary — the options should reflect what genuinely makes sense for this problem.
@@ -150,6 +150,21 @@ export async function analyzeVendors(
 - "Build" — build from scratch with AI-assisted development
 - "Build + Components" — assemble using purpose-built APIs (e.g. ElevenLabs for voice, Deepgram for ASR, Stripe for payments, Twilio for comms)
 - "Hybrid" — buy a vendor for the commodity core, build custom logic on top
+
+## AI-Assisted Development Calibration — CRITICAL
+All build time estimates MUST assume modern AI-assisted development (Claude Code, Cursor, GitHub Copilot). Traditional estimates are 3–5x too slow. Apply these calibrated multipliers:
+
+| Traditional estimate | AI-assisted estimate |
+|---|---|
+| 3–6 months | 3–6 weeks |
+| 1–3 months | 1–3 weeks |
+| 2–4 weeks | 3–7 days |
+| 1 week | 1–2 days |
+
+- Always state estimates as "with AI-assisted development (Claude Code / Cursor)" in the output string
+- A solo dev or small team using Claude Code can ship working MVPs in days, not months
+- AI handles boilerplate, API integrations, tests, and debugging — humans focus on architecture decisions and business logic
+- Do NOT regress to traditional waterfall estimates; those are not calibrated for 2025+ tooling
 
 ## Rules
 - Name each option descriptively, not generically. Use real product names. e.g. "Buy Intercom", "Build with ElevenLabs + Deepgram", "Zendesk + Custom AI Routing Layer"
@@ -182,7 +197,7 @@ Respond with ONLY valid JSON:
       "pros": ["specific pro 1", "specific pro 2"],
       "cons": ["specific con 1", "specific con 2"],
       "estimated_cost": "e.g. $800–$2,000/mo or $25,000 one-time",
-      "estimated_time": "e.g. 2–4 weeks to deploy (omit for pure Buy)",
+      "estimated_time": "e.g. '3–5 days with AI-assisted development (Claude Code / Cursor)' — omit for pure Buy",
       "best_for": "Who or what situation this option wins for",
       "key_technologies": ["Intercom", "Salesforce integration"],
       "risk_level": "Low|Medium|High",
@@ -292,7 +307,22 @@ export async function analyzeBuildChallenge(
     max_tokens: 4096,
     system: `You are a senior software engineer and AI tooling expert. Give an honest, technically grounded assessment of a build challenge — including exactly which off-the-shelf components change the picture and how.
 
-Be specific. Do not be falsely optimistic. Use the scraped component data for real pricing and capability details.
+## AI-Assisted Development Calibration — CRITICAL
+All effort and time estimates MUST assume modern AI-assisted development (Claude Code, Cursor, GitHub Copilot). Traditional estimates are 3–5x too slow for 2025:
+
+| Traditional | AI-assisted reality |
+|---|---|
+| 3–6 months | 3–6 weeks |
+| 1–3 months | 1–3 weeks |
+| 2–4 weeks | 3–7 days |
+| 1 week | 1–2 days |
+
+- A developer using Claude Code can write API integrations, boilerplate, and tests in hours, not days
+- integration_effort of "Low" = measurable hours; "Medium" = 1–3 days; "High" = 1–2 weeks; "Very High" = 3+ weeks
+- In with_components_notes, give concrete AI-assisted timeline estimates (e.g. "2–3 days to integrate with Claude Code")
+- Do NOT regress to pre-AI estimates; the falsely pessimistic estimate is now the traditional one
+
+Be specific. Be honest about what AI genuinely cannot do (architecture decisions, domain expertise, novel business logic). Use the scraped component data for real pricing and capability details.
 
 Respond with ONLY valid JSON:
 {

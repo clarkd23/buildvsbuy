@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
         // ── 4. Main analysis ──────────────────────────────────────────────────
         controller.enqueue(encode({ type: "status", message: "Analyzing build vs buy trade-offs..." }));
-        const baseAnalysis = await timeout(90_000, "analyzeVendors", analyzeVendors(enrichedProblem, vendorData));
+        const baseAnalysis = await timeout(150_000, "analyzeVendors", analyzeVendors(enrichedProblem, vendorData));
         console.log(t0(), "baseAnalysis done, features:", baseAnalysis.build_feasibility_breakdown?.length);
         controller.enqueue(encode({ type: "analysis_complete", message: "Core analysis done..." }));
 
@@ -116,7 +116,20 @@ export async function POST(req: NextRequest) {
         console.log(t0(), "streaming final result");
         controller.enqueue(encode({ type: "result", data: finalResult }));
 
-        // ── 7. Post-result: challenges + next steps + personas + persist ───────
+        // ── 7. Persist base result immediately to get a share ID ─────────────
+        let analysisId: string | null = null;
+        try {
+          const record = await prisma.analysis.create({
+            data: { userId: null, problemStatement, resultJson: finalResult as object },
+          });
+          analysisId = record.id;
+          controller.enqueue(encode({ type: "share_id", share_id: analysisId }));
+          console.log(t0(), "persisted analysis, id:", analysisId);
+        } catch (err) {
+          console.error("[analyze] initial persist failed:", err);
+        }
+
+        // ── 8. Post-result: challenges + next steps + personas ─────────────────
         console.log(t0(), "starting post-result parallel work...");
 
         const hardestItems = [...(baseAnalysis.build_feasibility_breakdown ?? [])]
@@ -176,7 +189,7 @@ export async function POST(req: NextRequest) {
           ])
         );
 
-        const [nextSteps] = await Promise.all([
+        const [nextSteps, , personaSettled, challengeSettled] = await Promise.all([
           Promise.race([
             generateNextSteps(
               enrichedProblem,
@@ -188,27 +201,40 @@ export async function POST(req: NextRequest) {
               resolve([]);
             }, 20_000)),
           ]),
-          Promise.race([
-            (async () => {
-              try {
-                const user = await getOrCreateUser(userId, "");
-                await incrementUsage(userId);
-                await prisma.analysis.create({
-                  data: { userId: user.id, problemStatement, resultJson: finalResult as object },
-                });
-                console.log(t0(), "persisted analysis");
-              } catch (err) {
-                console.error("[analyze] persist failed:", err);
-              }
-            })(),
-            new Promise<void>(resolve => setTimeout(resolve, 15_000)),
-          ]),
+          Promise.resolve(), // placeholder slot
           Promise.allSettled(synthesisPromises),
           Promise.allSettled(challengePromises),
         ]);
 
         if (nextSteps.length > 0) {
           controller.enqueue(encode({ type: "next_steps", next_steps: nextSteps }));
+        }
+
+        // Update the persisted record with the full result (challenges + personas + next steps)
+        if (analysisId) {
+          try {
+            const challenges = challengeSettled
+              .filter((x): x is PromiseFulfilledResult<Awaited<typeof challengePromises[0]>> => x.status === "fulfilled")
+              .map(x => x.value);
+            const personaViews = personaSettled
+              .filter((x): x is PromiseFulfilledResult<Awaited<typeof synthesisPromises[0]>> => x.status === "fulfilled")
+              .map(x => x.value)
+              .filter(Boolean);
+            await prisma.analysis.update({
+              where: { id: analysisId },
+              data: {
+                resultJson: {
+                  ...finalResult,
+                  top_build_challenges: challenges,
+                  persona_views: personaViews,
+                  next_steps: nextSteps,
+                } as object,
+              },
+            });
+            console.log(t0(), "updated analysis with full result");
+          } catch (err) {
+            console.error("[analyze] update persist failed:", err);
+          }
         }
 
       } catch (err) {

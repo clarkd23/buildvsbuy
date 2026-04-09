@@ -8,6 +8,7 @@ import ResultsDashboard from "@/components/ResultsDashboard";
 import DiscoveryPhase from "@/components/DiscoveryPhase";
 import AnalysisProgressBar from "@/components/AnalysisProgressBar";
 import ExportButton from "@/components/ExportButton";
+import CopyPromptButton from "@/components/CopyPromptButton";
 import PersonaSelector from "@/components/PersonaSelector";
 import AnalysisChat from "@/components/AnalysisChat";
 
@@ -38,6 +39,8 @@ export default function Home() {
   const [selectedPersona, setSelectedPersona] = useState<Persona>("exec");
   const [chatOpen, setChatOpen] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -159,6 +162,12 @@ export default function Home() {
           setResult(prev => prev ? { ...prev, next_steps: event.next_steps! } : prev);
         }
         break;
+      case "share_id":
+        if (event.share_id) {
+          setShareId(event.share_id);
+          window.history.replaceState(null, "", `/r/${event.share_id}`);
+        }
+        break;
       case "error":
         setErrorMsg(event.error || "Unknown error");
         setPhase("error");
@@ -175,7 +184,10 @@ export default function Home() {
     setChallengesExpected(0);
     setCustomVendors([]);
     setResult(null);
+    setShareId(null);
+    setCopied(false);
     setErrorMsg("");
+    window.history.replaceState(null, "", "/");
     setSelectedPersona("exec");
     setTimeout(() => textareaRef.current?.focus(), 50);
   }
@@ -311,6 +323,23 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <ExportButton result={result} problem={problem} />
+                <CopyPromptButton result={result} problem={problem} />
+                {shareId && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href)
+                        .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })
+                        .catch(() => window.prompt("Copy this link:", window.location.href));
+                    }}
+                    className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                    {copied ? "Copied!" : "Share"}
+                  </button>
+                )}
                 <button
                   onClick={() => setChatOpen(true)}
                   className="text-sm font-medium text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5"

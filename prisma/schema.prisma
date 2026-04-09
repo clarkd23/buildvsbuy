@@ -21,11 +21,11 @@ model User {
 
 model Analysis {
   id               String   @id @default(cuid())
-  userId           String
+  userId           String?
   problemStatement String
   resultJson       Json
   createdAt        DateTime @default(now())
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
