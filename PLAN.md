@@ -1,25 +1,15 @@
-
-
-Notes to Update. 
-1. Add  X and Substack to scope.
-2. Add a feature for multiple users to have access to the same profile so I can have comment / view access to someone elses profile to give feedback on their social brand plan.
-3. Update the terminology to use the term "Soul" , "Core Values", "Personal Goals"
-4. Phase 2 should be a list of "content ideas" that are generated indepednet of the platform that they are published on. They should align to goals, values ect. You can generate new ones based on feedback from previous tasks generated / completed, and also do a search on firecrawl to find related content for areas recently to generate new content.
-
-
-
 # Personal Brand Platform — Implementation Plan
 
 **Working Name:** PersonalBrand (TBD)
 **Stack:** Next.js 16, React 19, Prisma + PostgreSQL (Neon), Claude API, Tailwind 4, shadcn/ui
 **Repo:** /root/PersonalBranding (cloned from clarkd23/buildvsbuy)
-**Target:** Personal tool, LinkedIn-first, expand later
+**Target:** Personal tool — LinkedIn, X (Twitter), and Substack from day one
 
 ---
 
 ## Product Vision
 
-A single dashboard where you define your personal brand, generate on-brand content, publish to LinkedIn,, and track how your brand is growing — including how AI search engines perceive you.
+A single dashboard where you define your brand Soul, generate on-brand content ideas, publish across LinkedIn, X, and Substack, and track how your brand is growing — including how AI search engines perceive you.
 
 **Core insight from your doc:** In the AI era, people trust people, not logos. Existing tools focus on scheduling and generic content creation. Nobody ties your *brand identity* into the content engine or monitors your *LLM visibility*. That's the gap.
 
@@ -31,7 +21,7 @@ A single dashboard where you define your personal brand, generate on-brand conte
 |-------|-------|-----|
 | Infrastructure | Prisma + Neon adapter, lib/prisma.ts | Serverless PostgreSQL, proven pattern |
 | AI Integration | Claude API client pattern, parseJSON helper | Robust JSON extraction from LLM responses |
-| Web Scraping | Firecrawl integration pattern | Repurpose for LinkedIn/competitor scraping |
+| Web Scraping | Firecrawl integration pattern | Repurpose for content discovery + competitor scraping |
 | Streaming | SSE streaming architecture (API + client) | Real-time content generation UX |
 | Chat | AnalysisChat pattern | "Refine this post" follow-up conversations |
 | Auth | Clerk (wired but disabled) | Re-enable when ready |
@@ -56,11 +46,11 @@ User
   name              String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  brand             BrandProfile?
+  soul              Soul?
   platforms         PlatformAccount[]
   posts             Post[]
 
-BrandProfile
+Soul
   id                String    @id @default(cuid())
   userId            String    @unique
   user              User      @relation(...)
@@ -71,22 +61,49 @@ BrandProfile
   voiceDescription  String?         // Claude-generated voice summary
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
-  pillars           ContentPillar[]
+  coreValues        CoreValue[]
+  personalGoals     PersonalGoal[]
+  collaborators     SoulCollaborator[]
 
-ContentPillar
+CoreValue
   id                String    @id @default(cuid())
-  brandId           String
-  brand             BrandProfile @relation(...)
+  soulId            String
+  soul              Soul      @relation(...)
   name              String        // e.g. "AI Product Strategy"
-  description       String?       // What this pillar covers
+  description       String?       // What this value covers
   keywords          String[]      // SEO/topic keywords
   sortOrder         Int       @default(0)
+
+PersonalGoal
+  id                String    @id @default(cuid())
+  soulId            String
+  soul              Soul      @relation(...)
+  title             String        // e.g. "Get 10K LinkedIn followers by Q4"
+  description       String?       // Why this goal matters
+  targetDate        DateTime?     // Optional deadline
+  status            String        // "active" | "achieved" | "paused"
+  sortOrder         Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+SoulCollaborator
+  id                String    @id @default(cuid())
+  soulId            String
+  soul              Soul      @relation(...)
+  userId            String
+  user              User      @relation(...)
+  role              String        // "owner" | "editor" | "commenter" | "viewer"
+  invitedBy         String?       // userId of who invited them
+  invitedAt         DateTime  @default(now())
+  acceptedAt        DateTime?
+
+  @@unique([soulId, userId])
 
 PlatformAccount
   id                String    @id @default(cuid())
   userId            String
   user              User      @relation(...)
-  platform          String        // "linkedin" | "instagram" | "tiktok" | "x"
+  platform          String        // "linkedin" | "x" | "substack"
   accessToken       String?       // OAuth token (encrypted)
   refreshToken      String?
   profileUrl        String?
@@ -94,28 +111,42 @@ PlatformAccount
   connectedAt       DateTime?
   expiresAt         DateTime?
 
+ContentIdea
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(...)
+  coreValueId       String?
+  coreValue         CoreValue? @relation(...)
+  goalId            String?
+  goal              PersonalGoal? @relation(...)
+  title             String        // Idea headline
+  description       String?       // What the idea is about
+  sourceType        String?       // "ai_generated" | "firecrawl_inspired" | "manual" | "feedback_loop"
+  sourceRef         String?       // URL or reference if inspired by external content
+  status            String        // "new" | "in_progress" | "used" | "archived"
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  posts             Post[]
+
 Post
   id                String    @id @default(cuid())
   userId            String
   user              User      @relation(...)
-  pillarId          String?
-  pillar            ContentPillar? @relation(...)
-  platform          String        // "linkedin"
+  ideaId            String?
+  idea              ContentIdea? @relation(...)
+  coreValueId       String?
+  coreValue         CoreValue? @relation(...)
+  platform          String        // "linkedin" | "x" | "substack"
   content           String        // Post text
   mediaUrls         String[]      // Attached images/videos
   status            String        // "draft" | "scheduled" | "published" | "failed"
   scheduledFor      DateTime?
   publishedAt       DateTime?
-  linkedinPostId    String?       // Platform post ID after publishing
+  platformPostId    String?       // Platform post ID after publishing
   analytics         Json?         // Engagement data (likes, comments, impressions)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 ```
-
-**Questions for David:**
-- [ ] Any fields missing? Anything you'd want to track that's not here?
-- [ ] Should we store content generation history (prompts + drafts)?
-- [ ] Do you want a "Campaign" or "Content Series" concept (group posts around a theme)?
 
 ### 0.2 Strip buildvsbuy Code
 
@@ -130,91 +161,165 @@ Post
 ### 0.3 New Type System
 
 ```typescript
-// types/brand.ts
-interface BrandProfile { ... }
-interface ContentPillar { ... }
+// types/soul.ts
+interface Soul { ... }
+interface CoreValue { ... }
+interface PersonalGoal { ... }
 interface VoiceProfile { ... }
 
-// types/content.ts  
-interface PostDraft { ... }
+// types/content.ts
 interface ContentIdea { ... }
+interface PostDraft { ... }
 interface ContentCalendar { ... }
+
+// types/collaboration.ts
+interface SoulCollaborator { ... }
+type CollaboratorRole = "owner" | "editor" | "commenter" | "viewer"
 
 // types/platform.ts
 interface LinkedInProfile { ... }
+interface XProfile { ... }
+interface SubstackProfile { ... }
 interface PostAnalytics { ... }
 interface PlatformConnection { ... }
 ```
 
 ---
 
-## Phase 1 — Brand Profile Setup
+## Phase 1 — Soul Setup + Collaboration
 
-**Goal:** Onboarding flow where you define your brand. Claude helps you articulate it.
+**Goal:** Onboarding flow where you define your brand Soul. Claude helps you articulate it. Share it with collaborators for feedback.
 
-### 1.1 Brand Onboarding Flow
+### 1.1 Soul Onboarding Flow
 
 Step-by-step wizard:
 
-1. **Who are you?**
+1. **Define Your Soul — Who are you?**
    - Name, current role, headline
    - "Describe what you do in one sentence"
-   
-2. **What do you stand for?**
-   - Define 3-5 content pillars
+
+2. **Set Your Core Values — What do you stand for?**
+   - Define 3-5 Core Values
    - For each: name, description, key topics
-   - Claude suggests pillars based on your headline + role
-   
-3. **Who's your audience?**
+   - Claude suggests Core Values based on your headline + role
+
+3. **Define Your Personal Goals — What are you trying to achieve?**
+   - Define 1-5 Personal Goals for your brand
+   - e.g. "Become a recognized voice in AI product strategy", "Grow LinkedIn to 10K followers", "Launch a Substack with 500 subscribers"
+   - For each: title, description, optional target date
+   - Claude suggests goals based on your Soul + Core Values
+
+4. **Who's your audience?**
    - Target audience description
    - Industry, role level, pain points they have
-   
-4. **What's your voice?**
+
+5. **What's your voice?**
    - Paste 3-5 examples of your best writing (LinkedIn posts, blog excerpts, emails)
    - Claude analyzes and generates a "voice profile" summary
    - e.g. "Direct and practical. Uses concrete examples. Avoids jargon. Asks provocative questions."
 
-5. **Review & Confirm**
-   - Full brand profile card
+6. **Connect Your Platforms**
+   - Connect LinkedIn, X, and/or Substack accounts
+   - Import existing profile data to pre-fill where possible
+
+7. **Review & Confirm**
+   - Full Soul profile card
    - Edit anything before saving
 
-### 1.2 Brand Profile Dashboard
+### 1.2 Soul Dashboard
 
-- View/edit your brand profile anytime
-- See your pillars with post count per pillar
+- View/edit your Soul anytime
+- See your Core Values with content count per value
+- Track Personal Goals and progress
 - Voice profile with option to update samples
+- Platform connections status
 
-**Questions for David:**
-- [ ] Is this the right onboarding flow? Too much? Too little?
-- [ ] Should Claude auto-generate a full brand strategy doc from this input?
-- [ ] Want to import your existing LinkedIn profile to pre-fill?
+### 1.3 Multi-User Collaboration
+
+**Use case:** Share your Soul profile with friends, mentors, or colleagues so they can review and give feedback on your brand strategy.
+
+**Roles:**
+- **Owner** — Full control. Can edit everything, manage collaborators, delete the Soul.
+- **Editor** — Can edit the Soul profile, Core Values, and Personal Goals. Cannot manage collaborators or delete.
+- **Commenter** — Read-only access plus the ability to leave comments/feedback on any section of the Soul profile.
+- **Viewer** — Read-only access to the Soul profile. Can see everything but not modify or comment.
+
+**Features:**
+- Invite collaborators by email (sends invite link)
+- Manage collaborators from Soul settings (add, remove, change roles)
+- Activity feed showing collaborator comments and suggestions
+- Comment threads on specific sections (Core Values, Goals, Voice, etc.)
+- Notification when a collaborator leaves feedback
 
 ---
 
-## Phase 2 — LinkedIn Content Engine
+## Phase 2 — Content Idea Engine
 
-**Goal:** Generate on-brand content and post it to LinkedIn.
+**Goal:** Generate platform-agnostic content ideas aligned to your Soul, Core Values, and Personal Goals. Ideas can later be adapted to any platform.
 
-### 2.1 Content Generation (Claude-powered)
+### 2.1 AI-Powered Idea Generation
 
-**Input:** Pick a pillar + optional topic/angle + optional reference material
-**Output:** 2-3 draft post variations, each in your voice
+**Input:** Select a Core Value and/or Personal Goal + optional topic/angle
+**Output:** 3-5 content ideas with titles and descriptions
 
 Claude prompt architecture:
-- System prompt includes: your brand profile, voice description, pillar details
-- Each generation is anchored to your brand — not generic AI slop
-- Support for different post formats: thought leadership, story, hot take, how-to, carousel outline
+- System prompt includes: your Soul profile, voice description, Core Values, Personal Goals
+- Each idea is anchored to your brand — not generic AI slop
+- Ideas are platform-independent; they represent a *concept* that can become a LinkedIn post, X thread, or Substack article
+- Support for different content angles: thought leadership, personal story, hot take, how-to, deep dive, curated list
+
+### 2.2 Firecrawl-Based Content Discovery
+
+- Search for trending/recent content in your Core Value areas
+- Firecrawl scrapes relevant sources (industry blogs, news sites, competitor content)
+- Claude analyzes scraped content and suggests inspired content ideas
+- Each discovered idea links back to its source for reference
+- Configurable discovery schedule (daily/weekly) or on-demand
+
+### 2.3 Feedback Loop & Learning
+
+- Track which content ideas were turned into posts and how they performed
+- Claude analyzes patterns: which Core Values get most engagement, which angles work best
+- Use performance data to improve future idea generation
+- "More like this" and "Less like this" signals on ideas
+- Weekly idea quality report: here's what worked, here's what to try next
+
+### 2.4 Content Idea Dashboard
+
+- Idea backlog organized by Core Value and Personal Goal
+- Status tracking: new → in progress → used → archived
+- Filter/sort by Core Value, Goal, source type, status
+- Bulk generate ideas for the week
+- "Adapt to platform" action — takes an idea and opens the composer for a specific platform
+
+---
+
+## Phase 3 — Multi-Platform Publishing
+
+**Goal:** Adapt content ideas into platform-specific posts and publish across LinkedIn, X, and Substack.
+
+### 3.1 Platform-Aware Post Composer
+
+- Select a content idea (or start from scratch)
+- Choose target platform: LinkedIn, X, or Substack
+- Claude adapts the idea to platform-specific format and constraints:
+  - **LinkedIn:** Professional tone, 1300-char sweet spot, hashtags, hook-first structure
+  - **X (Twitter):** Concise threads or single tweets, casual tone, 280-char limit per tweet
+  - **Substack:** Long-form articles, newsletter format, section headers, deeper analysis
+- Rich text editor with platform-specific preview (character count, formatting)
 - "Refine this" chat follow-up (reuse AnalysisChat pattern)
-
-### 2.2 Post Composer
-
-- Rich text editor with LinkedIn preview (character count, formatting)
-- Select pillar tag
+- Tag with Core Value
 - Attach images (optional)
 - Save as draft / schedule / publish now
-- Content calendar view (week/month)
 
-### 2.3 LinkedIn Integration
+### 3.2 Content Calendar
+
+- Week/month calendar view across all platforms
+- Visual indicators for LinkedIn, X, and Substack posts
+- Drag-and-drop scheduling
+- Posting consistency tracker (streak per platform)
+
+### 3.3 LinkedIn Integration
 
 **OAuth Flow:**
 - LinkedIn OAuth 2.0 (3-legged)
@@ -227,143 +332,143 @@ Claude prompt architecture:
 - Support @mentions format
 - Handle token refresh gracefully
 
-**What we CAN'T do (per your doc):**
-- Read the feed (no API)
-- Get networking suggestions (no API)  
-- Read DMs (closed API)
-- Real-time webhooks for personal profiles
+**Limitations:**
+- Cannot read the feed (no API)
+- Cannot get networking suggestions (no API)
+- Cannot read DMs (closed API)
+- No real-time webhooks for personal profiles
 
-**Questions for David:**
-- [ ] What post formats matter most? Text-only? Text + image? Carousel/document?
-- [ ] Do you want a "content ideas" feature that generates a week of topics from your pillars?
-- [ ] How important is scheduling vs. just "generate + copy to clipboard" for v1?
+### 3.4 X (Twitter) Integration
+
+**OAuth Flow:**
+- OAuth 2.0 with PKCE
+- Scopes: `tweet.read`, `tweet.write`, `users.read`
+- Free tier: 1,500 tweets/month write, limited reads
+
+**Posting:**
+- Post single tweets and threads
+- Support for media attachments
+- Thread composer for multi-tweet content
+
+### 3.5 Substack Integration
+
+**Approach:** Substack has no official public API, so we use a hybrid approach:
+- Draft generation: Claude formats content as newsletter-ready HTML/markdown
+- Copy-to-clipboard or email-to-Substack workflow
+- If Substack API access becomes available, integrate directly
+- Store Substack post URLs for analytics tracking
+
+### 3.6 Comment & Engagement Management
+
+- Surface comments on your posts (via browser automation where needed)
+- AI-suggested replies (Claude, in your voice)
+- One-click reply (platform API or manual copy)
 
 ---
 
-## Phase 3 — Analytics + Engagement
+## Phase 4 — Analytics + Engagement
 
-**Goal:** Track what's working and who to engage with.
+**Goal:** Track what's working across all platforms and refine your strategy.
 
-### 3.1 Post Analytics
+### 4.1 Post Analytics
 
-**The problem:** LinkedIn's r_member_social scope is closed. We can't read your post analytics via API.
-
-**Options (pick one or combine):**
-1. **Browser automation** — Playwright scrapes your LinkedIn analytics page on a schedule
-2. **Manual import** — You export LinkedIn analytics CSV, we ingest it
-3. **Chrome extension** — Lightweight extension that captures analytics data as you browse LinkedIn
-4. **Wait for API access** — Apply for Community Management API (slow, uncertain)
+**Data collection per platform:**
+- **LinkedIn:** Browser automation or manual CSV import (r_member_social scope is closed)
+- **X:** API-based read of tweet metrics (impressions, likes, retweets, replies)
+- **Substack:** Manual import of subscriber/open/click data, or scrape from dashboard
 
 **Dashboard shows:**
-- Post performance over time (impressions, engagement rate, likes, comments)
-- Best performing content pillars
-- Posting consistency (streak tracker)
-- Follower growth trend
+- Post performance over time (impressions, engagement rate, likes, comments) per platform
+- Best performing Core Values
+- Posting consistency (streak tracker per platform)
+- Follower/subscriber growth trend across platforms
+- Cross-platform comparison: which platform drives most engagement for which topics
 
-### 3.2 Networking Suggestions
-
-Since LinkedIn's API doesn't expose feed or connection suggestions:
+### 4.2 Networking Suggestions
 
 **Approach:** Firecrawl + Claude
 - You provide 5-10 "aspirational peers" (people whose audience overlaps yours)
-- We scrape their recent public LinkedIn content
+- We scrape their recent public content across platforms
 - Claude identifies which posts to engage with and suggests comment angles
 - Weekly "engagement brief" — here's who to interact with and what to say
 
-### 3.3 Comment Management
-
-- Surface comments on your posts (via browser automation)
-- AI-suggested replies (Claude, in your voice)
-- One-click reply (browser automation or manual copy)
-
-**Questions for David:**
-- [ ] Browser automation vs manual import for analytics — preference?
-- [ ] How much networking/engagement automation do you actually want?
-- [ ] Is a Chrome extension an option you'd use?
-
 ---
 
-## Phase 4 — LLM Visibility Monitoring (The Moat)
+## Phase 5 — LLM Visibility Monitoring (The Moat)
 
 **Goal:** Track how AI search engines perceive your personal brand.
 
-### 4.1 LLM Brand Monitoring
+### 5.1 LLM Brand Monitoring
 
 - Periodically query ChatGPT, Perplexity, Gemini, Google AI Overviews with:
   - "Who is [your name]?"
-  - "Who are the top experts in [your pillars]?"
+  - "Who are the top experts in [your Core Values]?"
   - "Recommend someone who knows about [your topics]"
 - Parse and store responses
 - Track "Answer Inclusion" score over time — are you being mentioned?
 
-### 4.2 LLM Optimization Recommendations
+### 5.2 LLM Optimization Recommendations
 
 - Based on monitoring results, Claude suggests:
   - Content topics that would improve your LLM visibility
   - SEO signals to strengthen (LinkedIn headline, about section keywords)
   - External content to create (blog posts, guest articles that get cited)
 
-### 4.3 Competitor LLM Tracking
+### 5.3 Competitor LLM Tracking
 
 - Monitor how competitors appear in LLM responses
 - Compare your visibility vs theirs
 - "Share of Model" metric from your doc
-
-**Questions for David:**
-- [ ] Which LLMs matter most to monitor? ChatGPT + Perplexity + Gemini?
-- [ ] How often should we check? Daily? Weekly?
-- [ ] Is this phase a priority or more of a "cool to have later"?
-
----
-
-## Phase 5 — Multi-Platform Expansion (Future)
-
-- Instagram: Business/Creator account API (posting + analytics)
-- TikTok: Content Posting API (requires app review)
-- X/Twitter: Pay-per-use API ($0.005/read, $0.01/post) — expensive at scale
-- YouTube: Data API v3 (free, generous quotas)
-- Content adaptation: Claude rewrites posts for each platform's format/style
 
 ---
 
 ## Technical Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│                   Frontend                    │
-│  Next.js 16 + React 19 + shadcn/ui          │
-│                                               │
-│  Pages:                                       │
-│    /              Dashboard (brand + posts)   │
-│    /onboarding    Brand setup wizard          │
-│    /compose       Post composer               │
-│    /calendar      Content calendar            │
-│    /analytics     Performance dashboard       │
-│    /settings      Account + platform settings │
-└─────────────┬───────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────┐
-│                 API Routes                    │
-│                                               │
-│  /api/brand/*       Brand profile CRUD       │
-│  /api/content/*     Generate + manage posts  │
-│  /api/linkedin/*    OAuth + posting          │
-│  /api/analytics/*   Fetch + store metrics    │
-│  /api/chat          Refine content (stream)  │
-│  /api/webhooks/*    Clerk, LinkedIn          │
-└─────────────┬───────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────┐
-│              External Services                │
-│                                               │
-│  Claude API    Content gen + voice analysis  │
-│  LinkedIn API  OAuth + posting               │
-│  Firecrawl     Profile/competitor scraping   │
-│  Neon PG       Database                      │
-│  Clerk         Auth                          │
-└─────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│                    Frontend                        │
+│  Next.js 16 + React 19 + shadcn/ui               │
+│                                                    │
+│  Pages:                                            │
+│    /              Dashboard (Soul + ideas + posts) │
+│    /onboarding    Soul setup wizard                │
+│    /ideas         Content idea engine              │
+│    /compose       Post composer (multi-platform)   │
+│    /calendar      Content calendar                 │
+│    /analytics     Performance dashboard            │
+│    /collaborate   Manage collaborators + feedback  │
+│    /settings      Account + platform settings      │
+└──────────────┬─────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────┐
+│                  API Routes                        │
+│                                                    │
+│  /api/soul/*          Soul profile CRUD           │
+│  /api/ideas/*         Content idea engine         │
+│  /api/content/*       Generate + manage posts     │
+│  /api/collaborate/*   Collaborator management     │
+│  /api/linkedin/*      OAuth + posting             │
+│  /api/x/*             OAuth + posting             │
+│  /api/substack/*      Draft + publish             │
+│  /api/analytics/*     Fetch + store metrics       │
+│  /api/discover/*      Firecrawl content discovery │
+│  /api/chat            Refine content (stream)     │
+│  /api/webhooks/*      Clerk, platforms            │
+└──────────────┬─────────────────────────────────────┘
+               │
+               ▼
+┌──────────────────────────────────────────────────┐
+│               External Services                    │
+│                                                    │
+│  Claude API      Content gen + voice analysis     │
+│  LinkedIn API    OAuth + posting                  │
+│  X (Twitter) API OAuth + posting + analytics      │
+│  Substack        Draft export / future API        │
+│  Firecrawl       Content discovery + scraping     │
+│  Neon PG         Database                         │
+│  Clerk           Auth                             │
+└──────────────────────────────────────────────────┘
 ```
 
 ---
@@ -374,16 +479,24 @@ Since LinkedIn's API doesn't expose feed or connection suggestions:
 |------|------|-------------|
 | 0.1 | Strip buildvsbuy code, new schema + types | 1-2 hours |
 | 0.2 | New project structure + blank pages | 1 hour |
-| 1.1 | Brand onboarding wizard (UI + Claude prompts) | 3-4 hours |
-| 1.2 | Brand profile dashboard | 1-2 hours |
-| 2.1 | Content generation engine (Claude prompts) | 2-3 hours |
-| 2.2 | Post composer + calendar | 2-3 hours |
-| 2.3 | LinkedIn OAuth + posting API | 2-3 hours |
-| 3.1 | Analytics (browser automation or import) | 3-4 hours |
-| 3.2 | Networking suggestions | 2-3 hours |
-| 4.1 | LLM visibility monitoring | 3-4 hours |
+| 1.1 | Soul onboarding wizard (UI + Claude prompts) | 3-4 hours |
+| 1.2 | Soul dashboard | 1-2 hours |
+| 1.3 | Multi-user collaboration (invites, roles, comments) | 3-4 hours |
+| 2.1 | Content idea generation engine (Claude prompts) | 2-3 hours |
+| 2.2 | Firecrawl content discovery integration | 2-3 hours |
+| 2.3 | Feedback loop + learning system | 2-3 hours |
+| 2.4 | Content idea dashboard UI | 1-2 hours |
+| 3.1 | Post composer (multi-platform) + calendar | 3-4 hours |
+| 3.2 | LinkedIn OAuth + posting API | 2-3 hours |
+| 3.3 | X (Twitter) OAuth + posting API | 2-3 hours |
+| 3.4 | Substack draft/publish workflow | 1-2 hours |
+| 3.5 | Comment & engagement management | 2-3 hours |
+| 4.1 | Analytics dashboard (multi-platform) | 3-4 hours |
+| 4.2 | Networking suggestions | 2-3 hours |
+| 5.1 | LLM visibility monitoring | 3-4 hours |
 
-**Total to MVP (through Phase 2): ~12-16 hours of AI-assisted dev time**
+**Total to MVP (through Phase 2): ~16-22 hours of AI-assisted dev time**
+**Total all phases: ~34-45 hours**
 
 ---
 
@@ -392,10 +505,12 @@ Since LinkedIn's API doesn't expose feed or connection suggestions:
 1. **Product name?** PersonalBrand? BrandForge? Something else?
 2. **Domain?** Do you have one or want to pick one?
 3. **Content history:** Should we store every draft Claude generates, or just finals?
-4. **Campaign concept:** Group posts into series/campaigns, or keep it flat?
-5. **LinkedIn OAuth:** Do you have a LinkedIn app in the developer portal already?
-6. **Deployment:** Vercel (like buildvsbuy was)? Or run on YEW server?
-7. **Design:** Keep the buildvsbuy light theme, or want something different?
+4. **LinkedIn OAuth:** Do you have a LinkedIn app in the developer portal already?
+5. **X API tier:** Free tier (1,500 tweets/month) sufficient, or need Basic ($100/mo)?
+6. **Substack:** Do you have an existing Substack, or starting fresh?
+7. **Deployment:** Vercel (like buildvsbuy was)? Or run on YEW server?
+8. **Design:** Keep the buildvsbuy light theme, or want something different?
+9. **Collaboration notifications:** Email notifications for collaborator activity, or in-app only?
 
 ---
 
