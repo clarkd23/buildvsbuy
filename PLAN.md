@@ -1,3 +1,13 @@
+
+
+Notes to Update. 
+1. Add  X and Substack to scope.
+2. Add a feature for multiple users to have access to the same profile so I can have comment / view access to someone elses profile to give feedback on their social brand plan.
+3. Update the terminology to use the term "Soul" , "Core Values", "Personal Goals"
+4. Phase 2 should be a list of "content ideas" that are generated indepednet of the platform that they are published on. They should align to goals, values ect. You can generate new ones based on feedback from previous tasks generated / completed, and also do a search on firecrawl to find related content for areas recently to generate new content.
+
+
+
 # Personal Brand Platform — Implementation Plan
 
 **Working Name:** PersonalBrand (TBD)
@@ -9,7 +19,7 @@
 
 ## Product Vision
 
-A single dashboard where you define your personal brand, generate on-brand content, publish to LinkedIn, and track how your brand is growing — including how AI search engines perceive you.
+A single dashboard where you define your personal brand, generate on-brand content, publish to LinkedIn,, and track how your brand is growing — including how AI search engines perceive you.
 
 **Core insight from your doc:** In the AI era, people trust people, not logos. Existing tools focus on scheduling and generic content creation. Nobody ties your *brand identity* into the content engine or monitors your *LLM visibility*. That's the gap.
 
